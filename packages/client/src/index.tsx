@@ -61,6 +61,19 @@ function PWARedirect() {
   return <Navigate href={state.layout.getLastActivePath()} />;
 }
 
+let startupHandled = false;
+
+/**
+ * Home page, redirecting to the default server (VITE_DEFAULT_SERVER_ID) on app start only
+ */
+function StartupHome() {
+  const serverId = import.meta.env.VITE_DEFAULT_SERVER_ID as string | undefined;
+  const redirect = !startupHandled && !!serverId;
+  startupHandled = true;
+
+  return redirect ? <Navigate href={`/server/${serverId}`} /> : <HomePage />;
+}
+
 /**
  * Open settings and redirect to last active path
  */
@@ -168,6 +181,7 @@ const routes = () => (
         <Route path="/*" component={ServerHome} />
       </Route>
       <Route path="/channel/:channel/*" component={ChannelPage} />
+      <Route path="/" component={StartupHome} />
       <Route path="/*" component={HomePage} />
     </Route>
   </Route>
