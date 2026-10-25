@@ -6,7 +6,7 @@ import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
 import { useClient } from "@revolt/client";
-import { getChannelIcon, useDevice } from "@revolt/common";
+import { getChannelIcon, stripPanelMarker, useDevice } from "@revolt/common";
 import { TextWithEmoji } from "@revolt/markdown";
 import { useModals } from "@revolt/modal";
 import { useVoice } from "@revolt/rtc";
@@ -60,6 +60,8 @@ export function ChannelHeader(props: Props) {
   const voice = useVoice();
   const { layout } = useDevice();
 
+  const description = () => stripPanelMarker(props.channel.description);
+
   const searchValue = () => {
     if (!props.sidebarState) return null;
 
@@ -95,7 +97,7 @@ export function ChannelHeader(props: Props) {
           >
             <TextWithEmoji content={props.channel.name!} />
           </NonBreakingText>
-          <Show when={layout() !== "phone" && props.channel.description}>
+          <Show when={layout() !== "phone" && description()}>
             <Divider />
             <a
               class={descriptionLink}
@@ -115,9 +117,7 @@ export function ChannelHeader(props: Props) {
               <OverflowingText
                 class={typography({ class: "title", size: "small" })}
               >
-                <TextWithEmoji
-                  content={props.channel.description?.split("\n").shift()}
-                />
+                <TextWithEmoji content={description()?.split("\n").shift()} />
               </OverflowingText>
             </a>
           </Show>

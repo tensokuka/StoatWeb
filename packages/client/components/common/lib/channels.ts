@@ -1,9 +1,12 @@
 import { Channel } from "stoat.js";
 
+import { isPanelChannel } from "./panel";
+
 const CHANNEL_ICONS = {
   TEXT_SIDEBAR: "grid_3x3",
   TEXT_MENTION: "tag",
   VOICE: "headset_mic",
+  PANEL: "dashboard",
 } as const;
 
 /**
@@ -17,6 +20,8 @@ export function getChannelIcon(
 ): string {
   if (channel?.type === "TextChannel" && channel?.isVoice)
     return CHANNEL_ICONS.VOICE;
+
+  if (isPanelChannel(channel)) return CHANNEL_ICONS.PANEL;
 
   return context === "mention"
     ? CHANNEL_ICONS.TEXT_MENTION

@@ -66,6 +66,14 @@ export default {
    */
   RNNOISE_WORKLET_CDN_URL: getEnv("VITE_RNNOISE_WORKLET_CDN_URL"),
   /**
+   * Default panel bridge URL used by panel rooms
+   */
+  PANEL_BRIDGE_URL: getEnv("VITE_PANEL_BRIDGE_URL"),
+  /**
+   * Comma-separated list of origins panel rooms may embed as iframes
+   */
+  PANEL_IFRAME_ORIGINS: getEnv("VITE_PANEL_IFRAME_ORIGINS"),
+  /**
    * Session ID to set during development.
    */
   DEVELOPMENT_SESSION_ID: getEnv("VITE_SESSION_ID", true),

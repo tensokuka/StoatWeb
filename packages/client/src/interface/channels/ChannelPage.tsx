@@ -4,9 +4,11 @@ import { Channel } from "stoat.js";
 import { styled } from "styled-system/jsx";
 
 import { useClient } from "@revolt/client";
+import { isPanelChannel } from "@revolt/common";
 import { Navigate, useParams } from "@revolt/routing";
 
 import { AgeGate } from "./AgeGate";
+import { PanelChannel } from "./panel/PanelChannel";
 import { TextChannel } from "./text/TextChannel";
 
 /**
@@ -46,6 +48,16 @@ export const ChannelPage: Component = () => {
       <Switch fallback="Unknown channel type!">
         <Match when={!channel()}>
           <Navigate href={"../.."} />
+        </Match>
+        <Match when={isPanelChannel(channel())}>
+          <AgeGate
+            enabled={channel().mature}
+            contentId={channel().id}
+            contentName={"#" + channel().name}
+            contentType="channel"
+          >
+            <PanelChannel channel={channel()} />
+          </AgeGate>
         </Match>
         <Match when={TEXT_CHANNEL_TYPES.includes(channel()!.type)}>
           <AgeGate
