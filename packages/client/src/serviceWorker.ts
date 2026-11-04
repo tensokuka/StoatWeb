@@ -1,7 +1,17 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 
+import { openNotificationUrl } from "./notificationClick";
+
 declare let self: ServiceWorkerGlobalScope;
+
+// Notifications raised by the open app on platforms that require a service worker
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  if (typeof event.notification.data === "string") {
+    event.waitUntil(openNotificationUrl(self.clients, event.notification.data));
+  }
+});
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();

@@ -13,6 +13,7 @@ import { useSnackbar } from "@revolt/ui";
 
 import Instance from "../instance/Instance";
 import { killServiceWorkerSubscription } from "./NotificationsController";
+import { reconnectDelay } from "./reconnect";
 
 export enum State {
   Ready = "Ready",
@@ -120,7 +121,41 @@ class Lifecycle {
 
     this.client = null!;
     this.reset();
+
+    window.addEventListener("online", this.onNetworkResume);
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
   }
+
+  /**
+   * Stop listening for device events
+   */
+  destroy() {
+    window.removeEventListener("online", this.onNetworkResume);
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
+  }
+
+  /**
+   * Reconnect straight away if we are waiting for the network or a retry timer
+   */
+  private onNetworkResume = () => {
+    if (!navigator.onLine) return;
+
+    switch (this.state()) {
+      case State.Offline:
+        this.transition({ type: TransitionType.DeviceOnline });
+        break;
+      case State.Disconnected:
+        this.transition({ type: TransitionType.Retry });
+        break;
+    }
+  };
+
+  /**
+   * Phones may pause timers and network events while the app is in the background
+   */
+  private onVisibilityChange = () => {
+    if (document.visibilityState === "visible") this.onNetworkResume();
+  };
 
   private reset() {
     this.client = this.#controller.instance.newClient();
@@ -197,9 +232,7 @@ class Lifecycle {
             type: TransitionType.DeviceOffline,
           });
         } else {
-          const retryIn =
-            (Math.pow(2, this.#connectionFailures) - 1) *
-            (0.8 + Math.random() * 0.4);
+          const retryIn = reconnectDelay(this.#connectionFailures);
 
           console.info(
             "Will try to reconnect in",
@@ -664,6 +697,7 @@ export default class ClientController {
 
   dispose() {
     this.#cacheUserInfo();
+    this.lifecycle.destroy();
     this.lifecycle.transition({
       type: TransitionType.DisposeOnly,
     });

@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-export {}; //Prevents type error
+import { openNotificationUrl } from "./notificationClick";
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -24,7 +24,7 @@ const scope = new URL(self.registration.scope),
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   if (typeof event.notification.data === "string") {
-    event.waitUntil(self.clients.openWindow(event.notification.data));
+    event.waitUntil(openNotificationUrl(self.clients, event.notification.data));
   }
 });
 

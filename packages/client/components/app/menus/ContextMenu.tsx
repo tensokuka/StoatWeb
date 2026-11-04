@@ -157,7 +157,7 @@ export function ContextMenuButton(props: ButtonProps) {
 export function ContextMenuSubMenu(
   props: Omit<
     ButtonProps,
-    "ref" | "onClick" | "onMouseEnter" | "onMouseLeave"
+    "ref" | "onClick" | "onPointerEnter" | "onMouseLeave"
   > & {
     buttonContent: JSX.Element;
     onClick?: () => void;
@@ -200,7 +200,13 @@ export function ContextMenuSubMenu(
             setShow(isShowing() ? false : "show");
           }
         }}
-        onMouseEnter={() => setShow((show) => (show === "hide" ? show : true))}
+        // Touch sends a compatibility hover right before the click, which would
+        // open the submenu only for the click handler to close it again
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse") {
+            setShow((show) => (show === "hide" ? show : true));
+          }
+        }}
         {...buttonProps}
       >
         {local.buttonContent}

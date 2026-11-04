@@ -259,6 +259,10 @@ const AddReaction = styled(ReactionBase, {
     position: "relative",
 
     opacity: 0,
+    // There is no hover on touch screens, so always show it there
+    "@media (hover: none)": {
+      opacity: 1,
+    },
     justifyContent: "center",
     fontSize: "var(--emoji-size)",
     background: "var(--md-sys-color-surface-bright)",

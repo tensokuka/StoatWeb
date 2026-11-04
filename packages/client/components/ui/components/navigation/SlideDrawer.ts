@@ -8,6 +8,8 @@ import {
 
 import { useDevice } from "@revolt/common";
 
+import { ownsHorizontalGesture } from "./slideDrawerGuard";
+
 const ANIM_MS = 150,
   VEL_MS = 33, //30Hz velocity update
   VEL_AVG = 5, //Moving avg smoothing
@@ -17,6 +19,7 @@ const ANIM_MS = 150,
 
 type TrackTouch = {
   id: number;
+  target: EventTarget | null;
   x: number;
   y: number;
   newX?: number;
@@ -42,6 +45,8 @@ export class SlideDrawer {
   private vTmr: NodeJS.Timeout | null = null;
   private lShow = true;
   private ofs = 0;
+  /** State requested while the drawer was busy, applied once it settles */
+  private pendingShow: boolean | null = null;
 
   private dispose!: () => void;
   private eGet!: Accessor<boolean>;
@@ -81,6 +86,9 @@ export class SlideDrawer {
   }
 
   private start(e: TouchEvent) {
+    //A new gesture replaces any queued request
+    this.pendingShow = null;
+
     //Cancel if more than one finger
     if (e.touches.length > 1) return this.endTouch();
     if (this.touch || !this.eGet()) return;
@@ -89,6 +97,7 @@ export class SlideDrawer {
     const t = e.touches[0];
     this.touch = {
       id: t.identifier,
+      target: e.target,
       x: t.screenX,
       y: t.screenY,
     };
@@ -113,6 +122,13 @@ export class SlideDrawer {
       trig = t.trig;
 
     if (!trig && Math.abs(dy) > CANCEL_Y) {
+      this.endTouch();
+    } else if (
+      !trig &&
+      Math.abs(dx) > TRIG_X &&
+      ownsHorizontalGesture(t.target, this.root)
+    ) {
+      //Leave the swipe to the slider or scroll area under the finger
       this.endTouch();
     } else if (trig || Math.abs(dx) > TRIG_X) {
       //Store new/prev X for vel calc
@@ -210,8 +226,16 @@ export class SlideDrawer {
           this.setElState(show);
           this.tTmr = null;
           this.sSet(show ? SlideState.SHOWN : SlideState.HIDDEN);
+          this.applyPending();
         }, ANIM_MS + 50)
       : null;
+  }
+
+  /** Apply a request that arrived while the drawer was busy */
+  private applyPending() {
+    const show = this.pendingShow;
+    this.pendingShow = null;
+    if (show !== null) this.setShown(show);
   }
 
   private setElState(show: boolean) {
@@ -235,6 +259,7 @@ export class SlideDrawer {
   set enabled(en: boolean) {
     if (this.eGet() !== en) {
       this.drawer.style.zIndex = en ? "1" : "";
+      this.pendingShow = null;
       this.tfTimer();
       this.endTouch();
       if (!en) this.lShow = this.sGet() === SlideState.SHOWN;
@@ -252,7 +277,11 @@ export class SlideDrawer {
   }
 
   setShown(show: boolean) {
-    if (!this.eGet() || this.touch?.trig || this.tTmr) return false;
+    if (!this.eGet()) return false;
+    if (this.touch?.trig || this.tTmr) {
+      this.pendingShow = show;
+      return true;
+    }
     if ((this.ofs !== 0) !== show) {
       this.setElState(false);
       this.drawer.style.transform = `translateX(${this.ofs}px)`;

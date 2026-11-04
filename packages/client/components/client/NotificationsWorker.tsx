@@ -12,8 +12,14 @@ import {
   UserSystemMessage,
 } from "stoat.js";
 
+import { useDevice } from "@revolt/common";
 import { useNavigate, useSmartParams } from "@revolt/routing";
 import { useState } from "@revolt/state";
+
+import {
+  NOTIFICATION_OPEN_MESSAGE,
+  resolveNotificationTarget,
+} from "../../src/notificationClick";
 
 import { useClient, useNotifications, useSound } from ".";
 
@@ -27,6 +33,7 @@ export function NotificationsWorker() {
   const navigate = useNavigate();
   const params = useSmartParams();
   const sound = useSound();
+  const { isMobile, isIOSTouch } = useDevice();
 
   const { initNotifications } = useNotifications();
 
@@ -202,22 +209,82 @@ export function NotificationsWorker() {
 
     sound.playSound("message");
 
-    const notification = new Notification(title!, {
-      icon,
-      // @ts-expect-error this does exist on some platforms
-      image,
-      body,
-      timestamp: message.createdAt,
-      tag: message.channelId,
-      badge: "/assets/web/android-chrome-512x512.png",
-      silent: true,
-    });
-
-    notification.addEventListener("click", () => {
-      window.focus();
-      navigate(message.path);
-    });
+    showNotification(
+      title!,
+      {
+        icon,
+        // @ts-expect-error this does exist on some platforms
+        image,
+        body,
+        timestamp: message.createdAt,
+        tag: message.channelId,
+        badge: "/assets/web/android-chrome-512x512.png",
+        silent: true,
+      },
+      message.path,
+    );
   }
+
+  /**
+   * Show a notification which opens the given path when clicked
+   * @param title Title
+   * @param options Notification options
+   * @param path Path within the app
+   */
+  async function showNotification(
+    title: string,
+    options: NotificationOptions,
+    path: string,
+  ) {
+    // Mobile browsers require notifications to come from a service worker
+    if (!isMobile && !isIOSTouch) {
+      try {
+        const notification = new Notification(title, options);
+        notification.addEventListener("click", () => {
+          window.focus();
+          navigate(path);
+        });
+        return;
+      } catch {
+        // Not supported here, so try the service worker instead
+      }
+    }
+
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.showNotification(title, {
+        ...options,
+        data: `${location.origin}${base}${path}`,
+      });
+    } catch (e) {
+      console.error("Failed to show notification", e);
+    }
+  }
+
+  /**
+   * Open the target of a notification clicked while the app is already running
+   * @param event Message from a service worker
+   */
+  function onWorkerMessage(event: MessageEvent) {
+    if (event.data?.type !== NOTIFICATION_OPEN_MESSAGE) return;
+
+    const target = resolveNotificationTarget(event.data.url, client().user?.id);
+    if ("path" in target) {
+      navigate(target.path);
+    } else if (new URL(target.reload).pathname === location.pathname) {
+      // Changing only the hash wouldn't load the page and switch accounts
+      location.hash = new URL(target.reload).hash;
+      location.reload();
+    } else {
+      location.assign(target.reload);
+    }
+  }
+
+  navigator.serviceWorker?.addEventListener("message", onWorkerMessage);
+  onCleanup(() =>
+    navigator.serviceWorker?.removeEventListener("message", onWorkerMessage),
+  );
 
   createEffect(() => {
     client().addListener("messageCreate", onMessage);

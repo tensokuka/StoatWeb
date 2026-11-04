@@ -21,6 +21,12 @@ export function useNotifications() {
 
   const supportsNotification = "Notification" in window;
 
+  // Mobile browsers reject `new Notification()` but can show them from a worker
+  const supportsWorkerNotification =
+    "serviceWorker" in navigator &&
+    typeof ServiceWorkerRegistration !== "undefined" &&
+    "showNotification" in ServiceWorkerRegistration.prototype;
+
   const onDeny = async (showModal?: boolean) => {
     settings.resetNotificationsState("denied");
     if (showModal) {
@@ -46,6 +52,15 @@ export function useNotifications() {
   };
 
   const initNotifications = async () => {
+    // Earlier versions marked these devices as unsupported, which never resets
+    if (
+      settings.desktopNotificationsState === "unsupported" &&
+      supportsNotification &&
+      supportsWorkerNotification
+    ) {
+      settings.setValue("notifications:desktop", "default");
+    }
+
     if (
       settings.desktopNotificationsState === "default" ||
       (await notificationStateMismatch())
@@ -63,8 +78,10 @@ export function useNotifications() {
             setTimeout(() => noti.close(), 100),
           );
         } catch {
-          // An error means not supported.
-          settings.desktopNotificationsState = "unsupported";
+          // An error means not supported, unless a worker can show them instead.
+          if (!supportsWorkerNotification) {
+            settings.desktopNotificationsState = "unsupported";
+          }
         }
       } else {
         settings.desktopNotificationsState = "unsupported";

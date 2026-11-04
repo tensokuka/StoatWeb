@@ -9,7 +9,7 @@ import { render } from "solid-js/web";
 import { attachDevtoolsOverlay } from "@solid-devtools/overlay";
 import { Navigate, Route, Router, useParams } from "@solidjs/router";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
-import "material-symbols";
+import "material-symbols/outlined.css";
 import "mdui/mdui.css";
 import { PublicBot, PublicChannelInvite } from "stoat.js";
 

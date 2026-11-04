@@ -25,6 +25,12 @@ export const ProfileCard = styled("div", {
       1: {
         overflow: "hidden",
         aspectRatio: "1/1",
+
+        // A third of a phone screen is too narrow to fit a square card's content
+        _phone: {
+          gridColumn: "1 / -1",
+          aspectRatio: "auto",
+        },
       },
       2: {
         gridColumn: "1 / 3",

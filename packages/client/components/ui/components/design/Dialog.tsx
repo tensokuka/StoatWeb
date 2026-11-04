@@ -60,8 +60,9 @@ export function Dialog(props: Props) {
             >
               <Container
                 style={{
+                  // Never ask for more room than the screen can offer
                   "min-width": props.minWidth
-                    ? `${props.minWidth}px`
+                    ? `min(${props.minWidth}px, var(--dialog-available-width, 100vw))`
                     : undefined,
                   padding: props.padding ? `${props.padding}px` : undefined,
                 }}
@@ -183,13 +184,18 @@ const ScrimSurface = styled("div", {
     display: "grid",
     userSelect: "none",
     placeItems: "center",
-    pointerEvents: "all",
   },
   variants: {
     padding: {
       true: {
         padding: "80px",
-        _phone: { padding: "30px" },
+        "--dialog-available-width":
+          "calc(100vw - 160px - var(--inset-left) - var(--inset-right))",
+        _phone: {
+          padding: "30px",
+          "--dialog-available-width":
+            "calc(100vw - 60px - var(--inset-left) - var(--inset-right))",
+        },
       },
     },
     overflow: {
@@ -207,8 +213,8 @@ const ScrimSurface = styled("div", {
 const Container = styled("div", {
   base: {
     padding: "24px",
-    minWidth: "280px",
-    maxWidth: "560px",
+    minWidth: "min(280px, var(--dialog-available-width, 100vw))",
+    maxWidth: "min(560px, var(--dialog-available-width, 100vw))",
     borderRadius: "28px",
 
     display: "flex",
