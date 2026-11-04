@@ -25,9 +25,12 @@ export function CreateChannelModal(
 
   async function onSubmit() {
     try {
+      const type = group.controls.type.value as "Text" | "Voice" | "Panel";
       const channel = await props.server.createChannel({
-        type: group.controls.type.value as "Text" | "Voice",
+        type: type === "Panel" ? "Text" : type,
         name: group.controls.name.value,
+        // Panel rooms are text channels marked through their description
+        ...(type === "Panel" ? { description: "[panel]" } : {}),
       });
 
       //Reorder categories
@@ -94,6 +97,9 @@ export function CreateChannelModal(
             </Radio2.Option>
             <Radio2.Option value="Voice">
               <Trans>Voice Channel</Trans>
+            </Radio2.Option>
+            <Radio2.Option value="Panel">
+              <Trans>Panel</Trans>
             </Radio2.Option>
           </Form2.Radio>
         </Column>

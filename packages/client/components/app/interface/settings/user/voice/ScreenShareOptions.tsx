@@ -49,6 +49,16 @@ export function ScreenShareOptions() {
         >
           <Trans>Always Ask for Screen Share Quality</Trans>
         </CategoryButton>
+        <CategoryButton
+          icon="blank"
+          action={<Checkbox checked={voice.screenShareDrawingDisabled} />}
+          onClick={() =>
+            (voice.screenShareDrawingDisabled =
+              !voice.screenShareDrawingDisabled)
+          }
+        >
+          <Trans>Disable drawing on my screen share</Trans>
+        </CategoryButton>
       </CategoryButton.Group>
     </Column>
   );

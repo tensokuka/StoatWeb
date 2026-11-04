@@ -23,6 +23,8 @@ import { Symbol } from "@revolt/ui/components/utils/Symbol";
 
 import { VoiceStatefulUserIcons } from "../VoiceStatefulUserIcons";
 
+import { DrawingControls, DrawingOverlay } from "./DrawingOverlay";
+
 type TileProps = {
   focus?: boolean;
 };
@@ -72,6 +74,10 @@ export function ParticipantTile(props: TileProps) {
   const isVideo = () => !isVideoMuted();
   const isScreenShare = () => track.source === Track.Source.ScreenShare;
   const isSpeaking = useIsSpeaking(participant);
+  const screenShareSid = () =>
+    isScreenShare()
+      ? (track as TrackReference).publication?.trackSid
+      : undefined;
 
   const getHeight = () => {
     if (!props.focus || videoDims().height == 0) return {};
@@ -171,6 +177,24 @@ export function ParticipantTile(props: TileProps) {
             </Row>
           </OverlayInner>
         </Overlay>
+        {/* After the name overlay, which would otherwise block drawing */}
+        <Show when={voice.drawing()} keyed>
+          {(controller) => (
+            <Show when={screenShareSid()} keyed>
+              {(sid) => (
+                <>
+                  <DrawingOverlay
+                    controller={controller}
+                    track={sid}
+                    videoWidth={videoDims().width}
+                    videoHeight={videoDims().height}
+                  />
+                  <DrawingControls controller={controller} track={sid} />
+                </>
+              )}
+            </Show>
+          )}
+        </Show>
       </div>
     </Show>
   );

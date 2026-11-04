@@ -1,5 +1,6 @@
 import { Trans } from "@lingui/solid/macro";
 
+import { stripPanelMarker } from "@revolt/common";
 import { Markdown } from "@revolt/markdown";
 import { Dialog, DialogProps } from "@revolt/ui";
 
@@ -17,7 +18,7 @@ export function ChannelInfoModal(
       actions={[{ text: <Trans>Close</Trans> }]}
     >
       <div class={css({ userSelect: "text" })}>
-        <Markdown content={props.channel.description!} />
+        <Markdown content={stripPanelMarker(props.channel.description)} />
       </div>
     </Dialog>
   );

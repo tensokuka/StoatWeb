@@ -39,6 +39,7 @@ import { VoiceCallCardContext } from "@revolt/ui/components/features/voice/callC
 import { Device, useDevice } from "@revolt/common";
 import { InRoom } from "./components/InRoom";
 import { RoomAudioManager } from "./components/RoomAudioManager";
+import { DrawingController } from "./drawing";
 import { VoiceProcessor } from "./VoiceProcessor";
 
 type State =
@@ -69,6 +70,9 @@ class Voice {
 
   vidTracks: Accessor<TrackReferenceOrPlaceholder[]>;
 
+  drawing: Accessor<DrawingController | undefined>;
+  #setDrawing: Setter<DrawingController | undefined>;
+
   state: Accessor<State>;
   #setState: Setter<State>;
 
@@ -94,6 +98,7 @@ class Voice {
   private device: Device;
 
   private openModal;
+  private instance;
   private config;
   private limits;
   private screenShareTracks: Set<string>;
@@ -118,6 +123,10 @@ class Voice {
     this.#setRoom = setRoom;
 
     this.vidTracks = () => [];
+
+    const [drawing, setDrawing] = createSignal<DrawingController>();
+    this.drawing = drawing;
+    this.#setDrawing = setDrawing;
 
     const [state, setState] = createSignal<State>("READY");
     this.state = state;
@@ -147,6 +156,7 @@ class Voice {
     this.#setShowBar = setShowBar;
 
     const inst = useInstance();
+    this.instance = inst;
     this.config = inst.config;
     this.limits = inst.limits;
     this.openModal = modals.openModal;
@@ -241,9 +251,22 @@ class Voice {
       { room, onlySubscribed: false },
     );
 
+    const drawing = new DrawingController(room, {
+      isDisabledOnOwnShare: () => this.#settings.screenShareDrawingDisabled,
+      canModerate: (identity) => {
+        const server = channel.server;
+        if (!server) return false;
+
+        return !!this.instance.client.serverMembers
+          .getByKey({ server: server.id, user: identity })
+          ?.hasPermission(channel, "ManageMessages");
+      },
+    });
+
     batch(() => {
       this.#setRoom(room);
       this.#setChannel(channel);
+      this.#setDrawing(drawing);
       this.#setState("CONNECTING");
       this.#setVideo(false);
       this.#setScreenshare(false);
@@ -313,7 +336,7 @@ class Voice {
     // Gather latency
     const selected = await Promise.any(
       this.config.features.livekit.nodes.map(async (node) => {
-        return fetch(node.public_url.replace("wss", "https")).then(() => {
+        return fetch(node.public_url.replace(/^ws/, "http")).then(() => {
           return node.name;
         });
       }),
@@ -334,6 +357,8 @@ class Voice {
       const room = this.room();
       if (!room) return;
 
+      this.drawing()?.dispose();
+
       room.removeAllListeners();
       room.disconnect();
 
@@ -341,6 +366,7 @@ class Voice {
         this.#setState("READY");
         this.#setRoom();
         this.#setChannel();
+        this.#setDrawing();
         this.#setLayout();
         this.vidTracks = () => [];
       });
