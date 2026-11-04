@@ -39,6 +39,7 @@ export interface TypeVoice {
   screenShareQuality: ScreenShareQualityName;
   screenShareQualityAsk: boolean;
   screenShareAudio: boolean;
+  screenShareDrawingDisabled: boolean;
 
   inputVolume: number;
   outputVolume: number;
@@ -82,6 +83,7 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
       screenShareQuality: "low",
       screenShareQualityAsk: true,
       screenShareAudio: true,
+      screenShareDrawingDisabled: false,
       inputVolume: 1.0,
       outputVolume: 1.0,
       deafen: false,
@@ -144,6 +146,10 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
 
     if (typeof input.screenShareAudio === "boolean") {
       data.screenShareAudio = input.screenShareAudio;
+    }
+
+    if (typeof input.screenShareDrawingDisabled === "boolean") {
+      data.screenShareDrawingDisabled = input.screenShareDrawingDisabled;
     }
 
     if (typeof input.inputVolume === "number") {
@@ -335,6 +341,13 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
   }
 
   /**
+   * Set whether drawing on the user's own screen share is disabled
+   */
+  set screenShareDrawingDisabled(value: boolean) {
+    this.set("screenShareDrawingDisabled", value);
+  }
+
+  /**
    * Set input volume
    */
   set inputVolume(value: number) {
@@ -423,6 +436,13 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
    */
   get screenShareAudio(): boolean {
     return this.get().screenShareAudio;
+  }
+
+  /**
+   * Get whether drawing on the user's own screen share is disabled
+   */
+  get screenShareDrawingDisabled(): boolean {
+    return this.get().screenShareDrawingDisabled;
   }
 
   /**
