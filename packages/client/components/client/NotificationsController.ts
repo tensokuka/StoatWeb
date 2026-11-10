@@ -7,6 +7,7 @@ import { useState } from "@revolt/state";
 import { useSnackbar } from "@revolt/ui";
 
 import { IS_DEV, useClient } from ".";
+import { normaliseScope, sameScope } from "./pushScope";
 import pushWorker from "/src/pushWorker?worker&url";
 
 const PushPrefix = "/?@";
@@ -61,12 +62,25 @@ export function useNotifications() {
       settings.setValue("notifications:desktop", "default");
     }
 
+    const permissionGranted =
+      supportsNotification && Notification.permission === "granted";
+
     if (
+      settings.desktopNotificationsState === "allowed" &&
+      permissionGranted &&
+      (await notificationStateMismatch())
+    ) {
+      // Permission is already granted and only the push worker is missing,
+      // so re-register it quietly. Prompting or showing the sample here runs
+      // on every launch, and iOS keeps each sample in Notification Center.
+      await enablePushSubscription();
+    } else if (
       settings.desktopNotificationsState === "default" ||
       (await notificationStateMismatch())
     ) {
-      // We do this before permission checking because the constructor will still work fine if we don't have permission.
-      if (supportsNotification) {
+      // Show the sample only when we're about to ask, since it exists to
+      // introduce the prompt. The constructor works without permission.
+      if (supportsNotification && Notification.permission === "default") {
         try {
           const noti = new Notification(
             "This is what notifications will look like. You shouldn't see this for long.",
@@ -83,7 +97,7 @@ export function useNotifications() {
             settings.desktopNotificationsState = "unsupported";
           }
         }
-      } else {
+      } else if (!supportsNotification) {
         settings.desktopNotificationsState = "unsupported";
       }
 
@@ -102,12 +116,10 @@ export function useNotifications() {
     //Unproductive workers will not be tolerated in Soviet Russia
     const sesList = auth.getSessions().map((s) => pwPath + s.userId);
     for (const worker of await navigator.serviceWorker.getRegistrations()) {
-      if (worker.scope.indexOf(PushPrefix) !== -1) {
-        const wUrl = new URL(worker.scope);
-        if (!sesList.includes(wUrl.pathname + wUrl.search)) {
-          console.warn(
-            `[push] Unregistered dead worker for ${wUrl.search.slice(1)}`,
-          );
+      const scope = normaliseScope(worker.scope, location.origin);
+      if (scope.indexOf(PushPrefix) !== -1) {
+        if (!sesList.some((s) => sameScope(s, scope, location.origin))) {
+          console.warn(`[push] Unregistered dead worker for ${scope}`);
           worker.unregister();
         }
       }
@@ -220,9 +232,9 @@ async function getPushWorker(client: Client) {
   if (!scope) return;
   const worker = await navigator.serviceWorker.getRegistration(scope);
   if (!worker) return;
-  const wUrl = new URL(worker.scope);
-  //Check if scope *actually* matches, because root worker may be returned
-  if (wUrl.pathname + wUrl.search === scope) return worker;
+  // Check the scope *actually* matches, because the root worker may be
+  // returned. Compare decoded, as some browsers percent-encode the `@`
+  if (sameScope(worker.scope, scope, location.origin)) return worker;
 }
 
 /** Exported for the client controller. Don't use this unless you have to. */
