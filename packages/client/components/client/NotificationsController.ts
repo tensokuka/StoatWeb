@@ -7,11 +7,31 @@ import { useState } from "@revolt/state";
 import { useSnackbar } from "@revolt/ui";
 
 import { IS_DEV, useClient } from ".";
-import { normaliseScope, sameScope } from "./pushScope";
+import {
+  normaliseScope,
+  pushScopeBase,
+  pushScopeFor,
+  sameScope,
+} from "./pushScope";
 import pushWorker from "/src/pushWorker?worker&url";
 
-const PushPrefix = "/?@";
-const pwPath = pushWorker.slice(0, pushWorker.lastIndexOf("/")) + PushPrefix;
+/** Directory of the push worker script, where old versions scoped it */
+const pushWorkerDir = pushWorker.slice(0, pushWorker.lastIndexOf("/") + 1);
+
+/**
+ * Whether a registration is a push worker from before scopes were paths:
+ * `<dir>?@id`, or just `<dir>` on iOS, which drops the query
+ */
+function isLegacyPushWorker(registration: ServiceWorkerRegistration) {
+  const scope = normaliseScope(registration.scope, location.origin);
+  if (scope.includes("?@")) return true;
+  const worker =
+    registration.active ?? registration.waiting ?? registration.installing;
+  return (
+    scope === normaliseScope(pushWorkerDir, location.origin) &&
+    !!worker?.scriptURL.includes("pushWorker")
+  );
+}
 
 export function useNotifications() {
   const { settings, auth } = useState();
@@ -114,10 +134,22 @@ export function useNotifications() {
     }
 
     //Unproductive workers will not be tolerated in Soviet Russia
-    const sesList = auth.getSessions().map((s) => pwPath + s.userId);
+    const sesList = auth
+      .getSessions()
+      .map((s) => pushScopeFor(pushWorker, s.userId));
+    const base = normaliseScope(pushScopeBase(pushWorker), location.origin);
     for (const worker of await navigator.serviceWorker.getRegistrations()) {
       const scope = normaliseScope(worker.scope, location.origin);
-      if (scope.indexOf(PushPrefix) !== -1) {
+      if (isLegacyPushWorker(worker)) {
+        // Replaced by a path-scoped worker, set up above when push is on
+        console.warn(`[push] Unregistered old-style worker for ${scope}`);
+        try {
+          await (await worker.pushManager.getSubscription())?.unsubscribe();
+        } catch {
+          // Unregistering below drops the subscription anyway
+        }
+        worker.unregister();
+      } else if (scope.startsWith(base)) {
         if (!sesList.some((s) => sameScope(s, scope, location.origin))) {
           console.warn(`[push] Unregistered dead worker for ${scope}`);
           worker.unregister();
@@ -187,7 +219,7 @@ async function setUpServiceWorkerSubscription(client: Client) {
   }
 
   const worker = await navigator.serviceWorker.register(pushWorker, {
-    scope: pwPath + client.user.id,
+    scope: pushScopeFor(pushWorker, client.user.id),
     type: "module",
   });
 
@@ -228,7 +260,7 @@ function arrayBufferToBase64URL(buffer: ArrayBuffer): string {
 }
 
 async function getPushWorker(client: Client) {
-  const scope = client.user && pwPath + client.user.id;
+  const scope = client.user && pushScopeFor(pushWorker, client.user.id);
   if (!scope) return;
   const worker = await navigator.serviceWorker.getRegistration(scope);
   if (!worker) return;
