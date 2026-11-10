@@ -7,6 +7,7 @@ import { CategoryButton, Checkbox, Column, iconSize } from "@revolt/ui";
 
 import MdMarkUnreadChatAlt from "@material-design-icons/svg/outlined/mark_unread_chat_alt.svg?component-solid";
 import MdNotifications from "@material-design-icons/svg/outlined/notifications.svg?component-solid";
+import PushDiagnostics from "./PushDiagnostics";
 import Sounds from "./Sounds";
 
 /**
@@ -66,6 +67,7 @@ export default function Notifications(props: { isDesktop: boolean }) {
         </CategoryButton.Group>
       </Column>
       <Sounds />
+      <PushDiagnostics />
     </Column>
   );
 }
