@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { userIdFromScope } from "../components/client/pushScope";
 import { openNotificationUrl } from "./notificationClick";
 import { addPushLog } from "./pushLog";
 
@@ -20,7 +21,7 @@ interface StoatPushNotification {
 
 const scope = new URL(self.registration.scope),
   root = scope.origin,
-  userId = scope.search.slice(2);
+  userId = userIdFromScope(self.registration.scope);
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
