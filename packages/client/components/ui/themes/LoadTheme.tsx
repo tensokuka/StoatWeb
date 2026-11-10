@@ -80,6 +80,16 @@ export function LoadTheme() {
 
     for (const meta of document.head.querySelectorAll("meta[name=theme-color]"))
       (meta as HTMLMetaElement).content = color;
+
+    // The page extends under the home indicator (viewport-fit=cover) while
+    // #root stops above it, so the root background shows through there.
+    // mdui gives :root its light background, so match the content above.
+    document.documentElement.style.backgroundColor =
+      getCssProps()[
+        drawerShown
+          ? "--md-sys-color-surface-container-low"
+          : "--md-sys-color-surface-container-lowest"
+      ];
   });
 
   return <Masks />;
