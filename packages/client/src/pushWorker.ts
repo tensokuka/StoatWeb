@@ -17,6 +17,10 @@ interface StoatPushNotification {
   icon?: string;
   channel?: ChannelPartial;
   url?: string;
+  /** Usually the channel id, so a channel's pushes replace each other */
+  tag?: string;
+  /** Replace the last one without sound, as one was just shown for it */
+  quiet?: boolean;
 }
 
 const scope = new URL(self.registration.scope),
@@ -75,6 +79,16 @@ async function handlePush(event: PushEvent) {
       body: notif.body,
       data: `${root}${url ? `/i/${url.host}${url.pathname}/` : "/app"}#uid=${userId}`,
     };
+
+    if (notif.tag) {
+      // Same tag as the app's own notifications for the channel, so they
+      // replace each other. Only alert again when the server says to.
+      Object.assign(options, {
+        tag: notif.tag,
+        renotify: !notif.quiet,
+        silent: !!notif.quiet,
+      });
+    }
   } catch (e) {
     await addPushLog({
       time: Date.now(),
@@ -86,7 +100,12 @@ async function handlePush(event: PushEvent) {
 
   try {
     await self.registration.showNotification(title, options);
-    await addPushLog({ time: Date.now(), kind: "shown", scope, detail: title });
+    await addPushLog({
+      time: Date.now(),
+      kind: "shown",
+      scope,
+      detail: options.silent ? `${title} (quiet)` : title,
+    });
   } catch (e) {
     await addPushLog({
       time: Date.now(),

@@ -57,7 +57,9 @@ export default function Notifications(props: { isDesktop: boolean }) {
               icon={<MdMarkUnreadChatAlt {...iconSize(22)} />}
               description={
                 <Trans>
-                  Receive push notifications while the app is closed.
+                  Receive push notifications while you aren't using Stoat on any
+                  device, following your server and channel notification
+                  settings.
                 </Trans>
               }
             >
