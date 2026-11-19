@@ -373,7 +373,9 @@ export function MessageContainer(props: Props) {
     >
       <Show
         when={
+          // touchscreens use long press instead of the hover toolbar
           !isMobile &&
+          !hasCoarsePointer &&
           message &&
           props.isLink !== true &&
           props.isLink !== "hide"

@@ -64,6 +64,14 @@ export class Device {
   readonly hasCoarsePointer =
     typeof window !== "undefined" && matchMedia("(pointer: coarse)").matches;
 
+  /**
+   * Whether to behave as a touch device: phones (isMobile only spots "Mobi"
+   * in the user agent) and tablets, which mostly don't say "Mobi"
+   */
+  get isTouch() {
+    return this.isMobile || this.hasCoarsePointer;
+  }
+
   private pMedia;
   private tMedia;
   private setLayout;

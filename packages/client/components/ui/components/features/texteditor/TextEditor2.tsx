@@ -246,7 +246,8 @@ export function TextEditor2(props: Props) {
         if (value) {
           const text = value[0];
           if (text !== "_focus") {
-            if (!isMobile) view.focus();
+            // focusing pops up the on-screen keyboard
+            if (!(isMobile || hasCoarsePointer)) view.focus();
             view.dispatch(view.state.replaceSelection(text));
             if (text) props.onTyping?.();
             props.onChange(view.state.doc.toString());
