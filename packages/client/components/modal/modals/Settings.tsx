@@ -26,7 +26,13 @@ export function SettingsModal(
   createEffect(
     on(contRef, (cont) => {
       if (!cont || sDrawer) return;
-      sDrawer = new SlideDrawer(cont, rootRef!);
+      // On phones start on the list of sections, unless a page was requested
+      sDrawer = new SlideDrawer(
+        cont,
+        rootRef!,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        !!(props.context as any)?.page,
+      );
       setDiagDrawer(sDrawer);
     }),
   );

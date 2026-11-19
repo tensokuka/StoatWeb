@@ -590,10 +590,28 @@ export function Messages(props: Props) {
 
       if (index === -1) return;
 
-      listRef()!.children[index + (atStart() ? 1 : 0)]?.scrollIntoView({
+      const target = listRef()!.children[index + (atStart() ? 1 : 0)];
+      if (!target) return;
+
+      target.scrollIntoView({
         behavior: "smooth",
         block: "center",
       });
+
+      // A smooth scroll can be cut short, e.g. by the iOS keyboard closing and
+      // resizing the viewport mid-animation, so make sure we actually got there
+      setTimeout(() => {
+        if (!target.isConnected) return;
+
+        const container = findScrollContainer(listRef());
+        if (!container) return;
+
+        const view = container.getBoundingClientRect();
+        const rect = target.getBoundingClientRect();
+        if (rect.bottom <= view.top || rect.top >= view.bottom) {
+          target.scrollIntoView({ block: "center" });
+        }
+      }, 700);
     };
 
     if (messages().find((message) => message.id === messageId)) {
