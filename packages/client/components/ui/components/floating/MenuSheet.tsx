@@ -1,4 +1,12 @@
-import { JSX, Show, createContext, createSignal, useContext } from "solid-js";
+import {
+  JSX,
+  Show,
+  createContext,
+  createSignal,
+  onCleanup,
+  onMount,
+  useContext,
+} from "solid-js";
 import { Motion } from "solid-motionone";
 
 import { useLingui } from "@lingui/solid/macro";
@@ -6,6 +14,8 @@ import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
 import { useBackHandler } from "@revolt/common";
+
+import { addSheetDrag } from "../../gestures/sheetDrag";
 
 import MdArrowBack from "@material-design-icons/svg/outlined/arrow_back.svg?component-solid";
 
@@ -44,6 +54,17 @@ export function MenuSheet(props: {
   // Back leaves a submenu page before closing the whole sheet
   useBackHandler(() => pages().length > 0, popPage);
 
+  let sheetRef: HTMLDivElement | undefined;
+  let scrimRef: HTMLDivElement | undefined;
+
+  // Drag down to close, as the handle suggests
+  onMount(() => {
+    if (sheetRef) {
+      // eslint-disable-next-line solid/reactivity -- called from a touch handler
+      onCleanup(addSheetDrag(sheetRef, scrimRef, () => props.onClose()));
+    }
+  });
+
   const api: MenuSheetApi = {
     openPage: (title, content) =>
       setPages((pages) => [...pages, { title, content }]),
@@ -54,6 +75,7 @@ export function MenuSheet(props: {
       {/* one root: the Presence around floating elements takes one child */}
       <div>
         <Motion.div
+          ref={scrimRef}
           class={scrim}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -67,6 +89,7 @@ export function MenuSheet(props: {
           }}
         />
         <Motion.div
+          ref={sheetRef}
           class={sheet}
           role="menu"
           initial={{ y: "100%" }}
