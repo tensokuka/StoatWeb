@@ -16,6 +16,7 @@ import MdBadge from "@material-design-icons/svg/outlined/badge.svg?component-sol
 import MdCreateNewFolder from "@material-design-icons/svg/outlined/create_new_folder.svg?component-solid";
 import MdFace from "@material-design-icons/svg/outlined/face.svg?component-solid";
 import MdFolderOff from "@material-design-icons/svg/outlined/folder_off.svg?component-solid";
+import MdLibraryAdd from "@material-design-icons/svg/outlined/library_add.svg?component-solid";
 import MdLogout from "@material-design-icons/svg/outlined/logout.svg?component-solid";
 import MdMarkChatRead from "@material-design-icons/svg/outlined/mark_chat_read.svg?component-solid";
 import MdNotificationsActive from "@material-design-icons/svg/outlined/notifications_active.svg?component-solid";
@@ -74,7 +75,21 @@ export function ServerContextMenu(props: { server: Server }) {
   }
 
   /**
-   * Open server settings
+   * Create a channel
+   */
+  function createChannel() {
+    openModal({ type: "create_channel", server: props.server });
+  }
+
+  /**
+   * Create a category
+   */
+  function createCategory() {
+    openModal({ type: "create_category", server: props.server });
+  }
+
+  /**
+   * Edit identity
    */
   function editIdentity() {
     openModal({
@@ -326,6 +341,14 @@ export function ServerContextMenu(props: { server: Server }) {
           <Trans>Create invite</Trans>
         </ContextMenuButton>
       </Show>
+      <Show when={props.server.havePermission("ManageChannel")}>
+        <ContextMenuButton icon={MdLibraryAdd} onClick={createChannel}>
+          <Trans>Create channel</Trans>
+        </ContextMenuButton>
+        <ContextMenuButton icon={MdLibraryAdd} onClick={createCategory}>
+          <Trans>Create category</Trans>
+        </ContextMenuButton>
+      </Show>
       <Show when={permissionEditIdentity()}>
         <ContextMenuButton icon={MdFace} onClick={editIdentity}>
           <Trans>Edit your identity</Trans>
@@ -339,6 +362,7 @@ export function ServerContextMenu(props: { server: Server }) {
       <Show
         when={
           permissionInviteOthers() ||
+          props.server.havePermission("ManageChannel") ||
           permissionEditIdentity() ||
           permissionServerSettings()
         }

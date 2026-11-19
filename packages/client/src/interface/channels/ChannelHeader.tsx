@@ -321,10 +321,11 @@ export function ChannelHeader(props: Props) {
             contextMenu: () => (
               <ChannelContextMenu
                 channel={props.channel}
+                inChannel
                 prepend={
                   <Show when={compact()}>
                     <Show when={props.sidebarState}>
-                      <ContextMenuButton icon={MdKeep} onClick={togglePins}>
+                      <ContextMenuButton symbol={MdKeep} onClick={togglePins}>
                         <Trans>Pinned messages</Trans>
                       </ContextMenuButton>
                     </Show>
