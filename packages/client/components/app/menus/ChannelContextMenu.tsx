@@ -33,6 +33,11 @@ export function ChannelContextMenu(props: {
    * Extra items shown at the top, e.g. header actions hidden on phones
    */
   prepend?: JSX.Element;
+  /**
+   * Opened from inside the channel (its header's ⋮ button), not from the
+   * channel list, so leave out actions that belong to the list
+   */
+  inChannel?: boolean;
 }) {
   const state = useState();
   const instance = useInstance();
@@ -165,7 +170,12 @@ export function ChannelContextMenu(props: {
 
       <ContextMenuDivider />
 
-      <Show when={props.channel.server?.havePermission("ManageChannel")}>
+      <Show
+        when={
+          !props.inChannel &&
+          props.channel.server?.havePermission("ManageChannel")
+        }
+      >
         <ContextMenuButton icon={MdLibraryAdd} onClick={createChannel}>
           <Trans>Create channel</Trans>
         </ContextMenuButton>
