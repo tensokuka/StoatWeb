@@ -6,6 +6,7 @@ import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
 import { useClient } from "@revolt/client";
+import { useDevice } from "@revolt/common";
 import { KeybindAction, createKeybind } from "@revolt/keybinds";
 import { useModals } from "@revolt/modal";
 import { useState } from "@revolt/state";
@@ -15,6 +16,7 @@ import { useSearchSpace } from "@revolt/ui/components/utils/autoComplete";
 
 export function EditMessage(props: { message: Message }) {
   const state = useState();
+  const device = useDevice();
   const client = useClient();
   const { openModal, showError, isOpen, pop } = useModals();
 
@@ -62,6 +64,11 @@ export function EditMessage(props: { message: Message }) {
         <TextEditor2
           autoFocus
           onComplete={saveMessage}
+          enterSends={() =>
+            state.settings.enterSends(
+              device.isMobile || device.hasCoarsePointer,
+            )
+          }
           onChange={state.draft.setEditingMessageContent}
           initialValue={initialValue}
           autoCompleteSearchSpace={searchSpace}

@@ -10,7 +10,6 @@ import { scrollableStyles } from "../../../directives/scrollable";
 import { AutoCompleteSearchSpace } from "../../utils/autoComplete";
 
 import { useDevice } from "@revolt/common";
-import { useState } from "@revolt/state";
 import { codeMirrorAutoComplete } from "./codeMirrorAutoComplete";
 import { isInFencedCodeBlock } from "./codeMirrorCommon";
 import { smartLineWrapping } from "./codeMirrorLineWrap";
@@ -51,6 +50,12 @@ interface Props {
   onComplete?: () => void;
 
   /**
+   * Whether Enter submits; otherwise it adds a line and Ctrl/Cmd+Enter does.
+   * Read on each press. Defaults to on for desktop, off for touchscreens.
+   */
+  enterSends?: () => boolean;
+
+  /**
    * Event is fired when any keys are input
    */
   onTyping?: () => void;
@@ -76,7 +81,6 @@ export function TextEditor2(props: Props) {
   const editorScrollbarClasses = scrollableStyles();
 
   const { isMobile, hasCoarsePointer } = useDevice();
-  const state = useState();
   const codeMirror = document.createElement("div");
   codeMirror.className = editor;
 
@@ -107,7 +111,7 @@ export function TextEditor2(props: Props) {
     {
       key: "Enter",
       run: (view) =>
-        state.settings.enterSends(isMobile || hasCoarsePointer)
+        (props.enterSends?.() ?? !(isMobile || hasCoarsePointer))
           ? submit(view)
           : false,
     },

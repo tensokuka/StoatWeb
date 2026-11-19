@@ -31,6 +31,11 @@ interface Props {
   onSendMessage: () => void;
 
   /**
+   * Whether Enter sends (see TextEditor2)
+   */
+  enterSends?: () => boolean;
+
+  /**
    * Handle event when user is typing
    */
   onTyping: () => void;
@@ -252,6 +257,7 @@ export function MessageBox(props: Props) {
                 nodeReplacement={props.nodeReplacement}
                 onChange={props.setContent}
                 onComplete={props.onSendMessage}
+                enterSends={props.enterSends}
                 onTyping={props.onTyping}
                 onPreviousContext={props.onEditLastMessage}
                 autoCompleteSearchSpace={props.autoCompleteSearchSpace}
