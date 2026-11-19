@@ -4,7 +4,8 @@ import { useLingui } from "@lingui/solid/macro";
 import { API } from "stoat.js";
 import { styled } from "styled-system/jsx";
 
-import { useMessage } from "@revolt/app";
+import { ReactionDetails, useMessage } from "@revolt/app";
+import { ContextMenu } from "@revolt/app/menus/ContextMenu";
 import { Emoji } from "@revolt/markdown";
 import { useUsers } from "@revolt/markdown/users";
 import { Ripple, Text } from "@revolt/ui/components/design";
@@ -142,6 +143,7 @@ function Reaction(props: {
   removeReaction(id: string): void;
 }) {
   const { t } = useLingui();
+  const { message } = useMessage();
   const users = useUsers(() => [...(props.users?.values() ?? [])], false, true);
 
   /**
@@ -197,10 +199,23 @@ function Reaction(props: {
       )}
       aria={peopleList()}
     >
-      <ReactionBase active={props.active} onClick={onClick}>
-        <Ripple />
-        <Emoji emoji={props.reaction} /> {props.users?.size || 0}
-      </ReactionBase>
+      {/* long press (right click on desktop) shows who reacted */}
+      <div
+        use:floating={{
+          contextMenu: message
+            ? () => (
+                <ContextMenu>
+                  <ReactionDetails message={message} initial={props.reaction} />
+                </ContextMenu>
+              )
+            : undefined,
+        }}
+      >
+        <ReactionBase active={props.active} onClick={onClick}>
+          <Ripple />
+          <Emoji emoji={props.reaction} /> {props.users?.size || 0}
+        </ReactionBase>
+      </div>
     </Tooltip>
   );
 }

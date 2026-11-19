@@ -16,6 +16,7 @@ import MdDeleteSweep from "@material-design-icons/svg/outlined/delete_sweep.svg?
 import MdDownload from "@material-design-icons/svg/outlined/download.svg?component-solid";
 import MdEdit from "@material-design-icons/svg/outlined/edit.svg?component-solid";
 import MdEmojiEmotions from "@material-design-icons/svg/outlined/emoji_emotions.svg?component-solid";
+import MdGroups from "@material-design-icons/svg/outlined/groups.svg?component-solid";
 import MdLink from "@material-design-icons/svg/outlined/link.svg?component-solid";
 import MdMarkChatUnread from "@material-design-icons/svg/outlined/mark_chat_unread.svg?component-solid";
 import MdOpenInNew from "@material-design-icons/svg/outlined/open_in_new.svg?component-solid";
@@ -35,6 +36,7 @@ import {
   ContextMenuSubMenu,
 } from "./ContextMenu";
 import { QuickReactions } from "./QuickReactions";
+import { ReactionDetails } from "./ReactionDetails";
 
 /**
  * Context menu for messages
@@ -325,6 +327,16 @@ export function MessageContextMenu(props: {
           >
             <Trans>React</Trans>
           </ContextMenuButton>
+        </Show>
+
+        {/* who reacted, which touchscreens can't see in a tooltip */}
+        <Show when={props.message!.reactions.size}>
+          <ContextMenuSubMenu
+            icon={MdGroups}
+            buttonContent={<Trans>View reactions</Trans>}
+          >
+            <ReactionDetails message={props.message!} />
+          </ContextMenuSubMenu>
         </Show>
 
         <Show
