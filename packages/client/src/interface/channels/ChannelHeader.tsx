@@ -5,6 +5,8 @@ import { Channel } from "stoat.js";
 import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
+import { ChannelContextMenu } from "@revolt/app";
+import { ContextMenuButton } from "@revolt/app/menus/ContextMenu";
 import { useClient } from "@revolt/client";
 import { getChannelIcon, stripPanelMarker, useDevice } from "@revolt/common";
 import { TextWithEmoji } from "@revolt/markdown";
@@ -58,7 +60,37 @@ export function ChannelHeader(props: Props) {
   const { t } = useLingui();
   const state = useState();
   const voice = useVoice();
-  const { layout } = useDevice();
+  const { layout, isMobile, hasCoarsePointer } = useDevice();
+
+  /**
+   * Phones have little room, so secondary actions move into the ⋮ menu
+   */
+  const compact = () => layout() === "phone";
+
+  /**
+   * Touch has no right-click, so give the channel menu a visible way in
+   */
+  const showMenuButton = () => compact() || isMobile || hasCoarsePointer;
+
+  const canEditChannel = () =>
+    (props.channel.type === "Group" || !!props.channel.serverId) &&
+    props.channel.orPermission("ManageChannel", "ManagePermissions");
+
+  function togglePins() {
+    if (props.sidebarState!().state === "pins") {
+      props.setSidebarState!({ state: "default" });
+    } else {
+      props.setSidebarState!({ state: "pins" });
+    }
+  }
+
+  function addFriendsToGroup() {
+    openModal({
+      type: "add_members_to_group",
+      group: props.channel,
+      client: client(),
+    });
+  }
 
   const description = () => stripPanelMarker(props.channel.description);
 
@@ -155,12 +187,7 @@ export function ChannelHeader(props: Props) {
         </IconButton>
       </Show>
 
-      <Show
-        when={
-          (props.channel.type === "Group" || props.channel.serverId) &&
-          props.channel.orPermission("ManageChannel", "ManagePermissions")
-        }
-      >
+      <Show when={!compact() && canEditChannel()}>
         <IconButton
           onPress={() =>
             openModal({
@@ -180,17 +207,11 @@ export function ChannelHeader(props: Props) {
         </IconButton>
       </Show>
 
-      <Show when={props.channel.type === "Group"}>
+      <Show when={!compact() && props.channel.type === "Group"}>
         <Button
           variant="text"
           size="icon"
-          onPress={() =>
-            openModal({
-              type: "add_members_to_group",
-              group: props.channel,
-              client: client(),
-            })
-          }
+          onPress={addFriendsToGroup}
           use:floating={{
             tooltip: {
               placement: "bottom",
@@ -202,7 +223,7 @@ export function ChannelHeader(props: Props) {
         </Button>
       </Show>
 
-      <Show when={props.sidebarState}>
+      <Show when={!compact() && props.sidebarState}>
         <IconButton
           use:floating={{
             tooltip: {
@@ -210,15 +231,7 @@ export function ChannelHeader(props: Props) {
               content: t`View pinned messages`,
             },
           }}
-          onPress={() =>
-            props.sidebarState!().state === "pins"
-              ? props.setSidebarState!({
-                  state: "default",
-                })
-              : props.setSidebarState!({
-                  state: "pins",
-                })
-          }
+          onPress={togglePins}
         >
           <MdKeep />
         </IconButton>
@@ -291,6 +304,42 @@ export function ChannelHeader(props: Props) {
             }
           />
         </Show>
+      </Show>
+
+      <Show when={showMenuButton()}>
+        <IconButton
+          use:floating={{
+            contextMenu: () => (
+              <ChannelContextMenu
+                channel={props.channel}
+                prepend={
+                  <Show when={compact()}>
+                    <Show when={props.sidebarState}>
+                      <ContextMenuButton icon={MdKeep} onClick={togglePins}>
+                        <Trans>Pinned messages</Trans>
+                      </ContextMenuButton>
+                    </Show>
+                    <Show when={props.channel.type === "Group"}>
+                      <ContextMenuButton
+                        icon={MdPersonAdd}
+                        onClick={addFriendsToGroup}
+                      >
+                        <Trans>Add friends to group</Trans>
+                      </ContextMenuButton>
+                    </Show>
+                  </Show>
+                }
+              />
+            ),
+            contextMenuHandler: "click",
+            tooltip: {
+              placement: "bottom",
+              content: t`More options`,
+            },
+          }}
+        >
+          <Symbol>more_vert</Symbol>
+        </IconButton>
       </Show>
     </>
   );

@@ -8,6 +8,9 @@ for (const bp in Breakpoint) {
   condExt[bp] = `@media ${Breakpoint[bp as keyof typeof Breakpoint]}`;
 }
 
+// Touch screens, used to give tap targets the recommended 44-48px
+condExt.coarse = "@media (pointer: coarse)";
+
 export default defineConfig({
   // Whether to use css reset
   preflight: true,

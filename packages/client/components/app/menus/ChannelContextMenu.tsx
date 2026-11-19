@@ -1,4 +1,4 @@
-import { Match, Show, Switch } from "solid-js";
+import { JSX, Match, Show, Switch, children } from "solid-js";
 
 import { Trans } from "@lingui/solid/macro";
 import { Channel } from "stoat.js";
@@ -27,10 +27,17 @@ import { NotificationContextMenu } from "./shared/NotificationContextMenu";
 /**
  * Context menu for channels
  */
-export function ChannelContextMenu(props: { channel: Channel }) {
+export function ChannelContextMenu(props: {
+  channel: Channel;
+  /**
+   * Extra items shown at the top, e.g. header actions hidden on phones
+   */
+  prepend?: JSX.Element;
+}) {
   const state = useState();
   const instance = useInstance();
   const { openModal } = useModals();
+  const prepend = children(() => props.prepend);
 
   /**
    * Mark channel as read
@@ -130,6 +137,10 @@ export function ChannelContextMenu(props: { channel: Channel }) {
 
   return (
     <ContextMenu>
+      <Show when={prepend.toArray().some(Boolean)}>
+        {prepend()}
+        <ContextMenuDivider />
+      </Show>
       <Show
         when={
           props.channel.unread ||

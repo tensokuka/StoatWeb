@@ -10,10 +10,11 @@ import {
 import { Portal } from "solid-js/web";
 import { Motion, Presence } from "solid-motionone";
 
-import { autoUpdate, offset, shift } from "@floating-ui/dom";
+import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { styled } from "styled-system/jsx";
 
 import { iconSize, symbolSize, Text } from "@revolt/ui";
+import { fitToViewport } from "@revolt/ui/components/floating/fitToViewport";
 
 import MdChevronRight from "@material-design-icons/svg/outlined/chevron_right.svg?component-solid";
 
@@ -57,6 +58,10 @@ export const ContextMenuItem = styled("a", {
     gap: "var(--gap-md)",
     alignItems: "center",
     padding: "var(--gap-md) var(--gap-lg)",
+
+    _coarse: {
+      minHeight: "48px",
+    },
 
     "&:hover": {
       background:
@@ -180,7 +185,18 @@ export function ContextMenuSubMenu(
   const position = useFloating(anchor, ref, {
     placement: "right-start",
     whileElementsMounted: autoUpdate,
-    middleware: [offset(5), shift()],
+    middleware: [
+      offset(5),
+      // phones rarely have room to the right of the parent menu, so try the
+      // left, then below / above the row (covering the parent) before giving up
+      flip({
+        padding: 8,
+        fallbackPlacements: ["left-start", "bottom-start", "top-start"],
+      }),
+      shift({ padding: 8, crossAxis: true }),
+      // size the menu itself, not the wrapper which also holds the hover bridge
+      fitToViewport(8, (floating) => floating.lastElementChild as HTMLElement),
+    ],
   });
 
   return (

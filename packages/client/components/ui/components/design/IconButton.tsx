@@ -122,6 +122,9 @@ const iconButton2 = cva({
       },
       sm: {
         height: "40px",
+        _coarse: {
+          height: "44px",
+        },
       },
       md: {
         height: "56px",
