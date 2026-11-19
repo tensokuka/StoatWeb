@@ -4,7 +4,7 @@
 import "./sentry";
 import "./viewport";
 
-import { JSX, onMount } from "solid-js";
+import { JSX, lazy, onMount } from "solid-js";
 import { render } from "solid-js/web";
 
 import { attachDevtoolsOverlay } from "@solid-devtools/overlay";
@@ -45,8 +45,6 @@ import { AndroidNag } from "./AndroidNag";
 import AuthPage from "./Auth";
 import Interface from "./Interface";
 import "./index.css";
-import { DevelopmentPage } from "./interface/Development";
-import { Discover } from "./interface/Discover";
 import { Friends } from "./interface/Friends";
 import { HomePage } from "./interface/Home";
 import { ServerHome } from "./interface/ServerHome";
@@ -156,6 +154,16 @@ function MountContext(props: { children?: JSX.Element }) {
     </StateContext>
   );
 }
+
+// Rarely visited pages load on demand (P2)
+const DevelopmentPage = lazy(() =>
+  import("./interface/Development").then((m) => ({
+    default: m.DevelopmentPage,
+  })),
+);
+const Discover = lazy(() =>
+  import("./interface/Discover").then((m) => ({ default: m.Discover })),
+);
 
 const routes = () => (
   <Route component={MountContext}>
