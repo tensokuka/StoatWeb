@@ -268,6 +268,12 @@ const Container = styled("div", {
   base: {
     paddingRight: "var(--gap-md)",
     width: "var(--layout-width-channel-sidebar)",
+
+    // full-screen page on phones
+    _phone: {
+      width: "100%",
+      paddingInline: "var(--gap-sm)",
+    },
   },
 });
 

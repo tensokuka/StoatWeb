@@ -240,7 +240,15 @@ export function ChannelHeader(props: Props) {
       <Show when={props.sidebarState && canIHasSidebar(props.channel)}>
         <IconButton
           onPress={() => {
-            if (props.sidebarState!().state === "default") {
+            // phones open members as their own page, rather than flipping
+            // the persisted sidebar setting which would cover every channel
+            if (compact()) {
+              props.setSidebarState!(
+                props.sidebarState!().state === "members"
+                  ? { state: "default" }
+                  : { state: "members" },
+              );
+            } else if (props.sidebarState!().state === "default") {
               state.layout.toggleSectionState(
                 LAYOUT_SECTIONS.MEMBER_SIDEBAR,
                 true,
@@ -271,7 +279,8 @@ export function ChannelHeader(props: Props) {
       <Show when={searchValue() !== null}>
         <Show
           when={
-            layout() === "desktop" || props.sidebarState!().state !== "default"
+            layout() === "desktop" ||
+            (!compact() && props.sidebarState!().state !== "default")
           }
           fallback={
             <IconButton

@@ -18,6 +18,8 @@ export function TextSearchSidebar(props: {
 
   const query = useQuery(() => ({
     queryKey: ["search", props.channel.id, props.query, sort()],
+    // phones open search before anything is typed, so wait for a query
+    enabled: !!(props.query.query?.trim() || props.query.pinned),
     queryFn: () =>
       props.channel
         .searchWithUsers(

@@ -8,12 +8,14 @@ import {
   onCleanup,
 } from "solid-js";
 
+import { Trans, useLingui } from "@lingui/solid/macro";
 import { cva } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 import { decodeTime, ulid } from "ulid";
 
 import { DraftMessages, Messages } from "@revolt/app";
 import { useClient } from "@revolt/client";
+import { useDevice } from "@revolt/common";
 import { Keybind, KeybindAction, createKeybind } from "@revolt/keybinds";
 import { useNavigate, useSmartParams } from "@revolt/routing";
 import { useState } from "@revolt/state";
@@ -21,11 +23,13 @@ import { LAYOUT_SECTIONS } from "@revolt/state/stores/Layout";
 import {
   BelowFloatingHeader,
   Header,
+  IconButton,
   NewMessages,
   Text,
   main,
 } from "@revolt/ui";
 import { VoiceChannelCallCardMount } from "@revolt/ui/components/features/voice/callCard/VoiceCallCard";
+import { Symbol } from "@revolt/ui/components/utils/Symbol";
 
 import { ChannelHeader } from "../ChannelHeader";
 import { ChannelPageProps } from "../ChannelPage";
@@ -48,6 +52,13 @@ export type SidebarState =
       state: "pins";
     }
   | {
+      /**
+       * Member list opened explicitly, only used on phones where the
+       * persisted member sidebar setting would otherwise cover the chat
+       */
+      state: "members";
+    }
+  | {
       state: "default";
     };
 
@@ -61,6 +72,13 @@ export function canIHasSidebar(ch: Channel) {
 export function TextChannel(props: ChannelPageProps) {
   const state = useState();
   const client = useClient();
+  const { t } = useLingui();
+  const { layout } = useDevice();
+
+  /**
+   * On phones the sidebar covers the whole channel as its own page
+   */
+  const phone = () => layout() === "phone";
 
   // Last unread message id
   const [lastId, setLastId] = createSignal<string>();
@@ -176,6 +194,51 @@ export function TextChannel(props: ChannelPageProps) {
     ),
   );
 
+  /**
+   * Whether the sidebar is showing
+   */
+  const sidebarOpen = () =>
+    phone()
+      ? sidebarState().state !== "default"
+      : (state.layout.getSectionState(LAYOUT_SECTIONS.MEMBER_SIDEBAR, true) &&
+          canIHasSidebar(props.channel)) ||
+        sidebarState().state !== "default";
+
+  const closeSidebar = () => setSidebarState({ state: "default" });
+
+  // On phones, picking a search result or pin should reveal the chat
+  // underneath so the highlighted message can actually be seen
+  createEffect(
+    on(
+      highlightMessageId,
+      (messageId) => {
+        const current = sidebarState().state;
+        if (
+          messageId &&
+          phone() &&
+          (current === "search" || current === "pins")
+        ) {
+          closeSidebar();
+        }
+      },
+      { defer: true },
+    ),
+  );
+
+  /**
+   * Title for the full-screen sidebar on phones
+   */
+  const phoneTitle = () => {
+    switch (sidebarState().state) {
+      case "pins":
+        return t`Pinned messages`;
+      case "search":
+        return t`Search`;
+      default:
+        return t`Members`;
+    }
+  };
+
   // If this is a server text channel, sync the members
   // todo: useQuery
   createEffect(
@@ -239,27 +302,64 @@ export function TextChannel(props: ChannelPageProps) {
             onMessageSend={() => jumpToBottomRef?.()}
           />
         </main>
-        <Show
-          when={
-            (state.layout.getSectionState(
-              LAYOUT_SECTIONS.MEMBER_SIDEBAR,
-              true,
-            ) &&
-              canIHasSidebar(props.channel)) ||
-            sidebarState().state !== "default"
-          }
-        >
+        <Show when={sidebarOpen()}>
           <div
             ref={sidebarScrollTargetElement}
             use:scrollable={{
               direction: "y",
               showOnHover: true,
-              class: sidebar(),
+              class: sidebar({ phone: phone() }),
             }}
             style={{
-              width: sidebarState().state !== "default" ? "360px" : "",
+              width:
+                !phone() && sidebarState().state !== "default" ? "360px" : "",
             }}
+            // the panel covers the chat on phones, so swipes shouldn't
+            // pull the channel drawer out from under it
+            data-no-drawer={phone() ? "" : undefined}
           >
+            <Show when={phone()}>
+              <PhonePanelBar>
+                <IconButton
+                  onPress={closeSidebar}
+                  use:floating={{
+                    tooltip: {
+                      placement: "bottom",
+                      content: t`Back to chat`,
+                    },
+                  }}
+                >
+                  <Symbol>arrow_back</Symbol>
+                </IconButton>
+                <Show
+                  when={sidebarState().state === "search"}
+                  fallback={
+                    <Text class="title" size="large">
+                      {phoneTitle()}
+                    </Text>
+                  }
+                >
+                  <PhoneSearchBox
+                    type="search"
+                    enterkeyhint="search"
+                    placeholder={t`Search messages...`}
+                    value={(sidebarState() as { query: string }).query}
+                    ref={(el) =>
+                      // focus once mounted so the keyboard comes up right away
+                      queueMicrotask(() => {
+                        if (!el.value) el.focus();
+                      })
+                    }
+                    onChange={(e) =>
+                      setSidebarState({
+                        state: "search",
+                        query: e.currentTarget.value,
+                      })
+                    }
+                  />
+                </Show>
+              </PhonePanelBar>
+            </Show>
             <Switch
               fallback={
                 <MemberSidebar
@@ -271,11 +371,13 @@ export function TextChannel(props: ChannelPageProps) {
             >
               <Match when={sidebarState().state === "search"}>
                 <WideSidebarContainer>
-                  <SidebarTitle>
-                    <Text class="label" size="large">
-                      Search Results
-                    </Text>
-                  </SidebarTitle>
+                  <Show when={!phone()}>
+                    <SidebarTitle>
+                      <Text class="label" size="large">
+                        <Trans>Search Results</Trans>
+                      </Text>
+                    </SidebarTitle>
+                  </Show>
                   <TextSearchSidebar
                     channel={props.channel}
                     query={{
@@ -286,11 +388,13 @@ export function TextChannel(props: ChannelPageProps) {
               </Match>
               <Match when={sidebarState().state === "pins"}>
                 <WideSidebarContainer>
-                  <SidebarTitle>
-                    <Text class="label" size="large">
-                      Pinned Messages
-                    </Text>
-                  </SidebarTitle>
+                  <Show when={!phone()}>
+                    <SidebarTitle>
+                      <Text class="label" size="large">
+                        <Trans>Pinned Messages</Trans>
+                      </Text>
+                    </SidebarTitle>
+                  </Show>
                   <TextSearchSidebar
                     channel={props.channel}
                     query={{ pinned: true, sort: "Latest" }}
@@ -302,7 +406,7 @@ export function TextChannel(props: ChannelPageProps) {
             <Show when={sidebarState().state !== "default"}>
               <Keybind
                 keybind={KeybindAction.CLOSE_SIDEBAR}
-                onPressed={() => setSidebarState({ state: "default" })}
+                onPressed={closeSidebar}
               />
             </Show>
           </div>
@@ -337,6 +441,66 @@ const sidebar = cva({
     // color: "var(--colours-sidebar-channels-foreground)",
     // background: "var(--colours-sidebar-channels-background)",
   },
+  variants: {
+    phone: {
+      // a full-screen page over the channel, header included
+      true: {
+        position: "fixed",
+        inset: 0,
+        zIndex: 20,
+        width: "100%",
+        borderRadius: 0,
+        background: "var(--md-sys-color-surface)",
+        paddingInline: "var(--inset-left) var(--inset-right)",
+        paddingBottom: "var(--inset-bottom)",
+      },
+      false: {},
+    },
+  },
+  defaultVariants: {
+    phone: false,
+  },
+});
+
+/**
+ * Top bar of the full-screen sidebar on phones, stays put while the list scrolls
+ */
+const PhonePanelBar = styled("div", {
+  base: {
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
+
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--gap-md)",
+
+    paddingTop: "var(--inset-top)",
+    paddingInline: "var(--gap-sm) var(--gap-md)",
+    minHeight: "calc(56px + var(--inset-top))",
+
+    background: "var(--md-sys-color-surface)",
+    color: "var(--md-sys-color-on-surface)",
+    fill: "var(--md-sys-color-on-surface)",
+  },
+});
+
+/**
+ * Search field in the phone top bar
+ */
+const PhoneSearchBox = styled("input", {
+  base: {
+    flexGrow: 1,
+    minWidth: 0,
+    height: "44px",
+    paddingInline: "16px",
+    borderRadius: "var(--borderRadius-full)",
+    background: "var(--md-sys-color-surface-container-high)",
+    color: "var(--md-sys-color-on-surface)",
+
+    // iOS zooms into inputs with text under 16px
+    fontSize: "16px",
+  },
 });
 
 /**
@@ -346,6 +510,11 @@ const WideSidebarContainer = styled("div", {
   base: {
     paddingRight: "var(--gap-md)",
     width: "360px",
+
+    _phone: {
+      width: "100%",
+      paddingInline: "var(--gap-md)",
+    },
   },
 });
 
