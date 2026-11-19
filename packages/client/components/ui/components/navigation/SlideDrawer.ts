@@ -54,10 +54,17 @@ export class SlideDrawer {
   private sGet!: Accessor<SlideState>;
   private sSet!: Setter<SlideState>;
 
+  /**
+   * @param drawer Element that slides over the root
+   * @param root Element the gestures are tracked on
+   * @param initiallyShown Whether the drawer starts slid in
+   */
   constructor(
     private drawer: HTMLElement,
     private root: HTMLElement,
+    initiallyShown = true,
   ) {
+    this.lShow = initiallyShown;
     this.start = this.start.bind(this);
     this.move = this.move.bind(this);
     root.addEventListener("touchstart", this.start);

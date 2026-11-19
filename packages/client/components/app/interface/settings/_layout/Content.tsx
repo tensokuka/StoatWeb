@@ -4,8 +4,13 @@ import { Motion, Presence } from "solid-motionone";
 import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
-import { Breadcrumbs, IconButton, Text } from "@revolt/ui";
+import { useLingui } from "@lingui/solid/macro";
 
+import { useDevice } from "@revolt/common";
+import { useState } from "@revolt/state";
+import { Breadcrumbs, IconButton, OverflowingText, Text } from "@revolt/ui";
+
+import MdArrowBack from "@material-design-icons/svg/outlined/arrow_back.svg?component-solid";
 import MdClose from "@material-design-icons/svg/outlined/close.svg?component-solid";
 
 import { SettingsList } from "..";
@@ -24,6 +29,23 @@ export function SettingsContent(props: {
   action: Accessor<(() => JSX.Element) | undefined>;
 }) {
   const { navigate } = useSettingsNavigation();
+  const { layout } = useDevice();
+  const { diagDrawer } = useState();
+  const { t } = useLingui();
+
+  const phone = () => layout() === "phone";
+
+  /**
+   * Go up one level: to the parent page, or back to the list of sections
+   */
+  function back() {
+    const segments = props.page()?.split("/") ?? [];
+    if (segments.length > 1) {
+      navigate(segments.slice(0, -1).join("/"));
+    } else {
+      diagDrawer()?.setShown(false);
+    }
+  }
   const reduceMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -33,7 +55,38 @@ export function SettingsContent(props: {
       <Show when={props.page()}>
         <InnerContent class="settings_cont">
           <InnerColumn>
-            <Show when={props.page() !== "account"}>
+            <Show when={phone()}>
+              <PhoneBar>
+                <IconButton
+                  onPress={back}
+                  use:floating={{
+                    tooltip: { placement: "bottom", content: t`Back` },
+                  }}
+                >
+                  <MdArrowBack />
+                </IconButton>
+                <OverflowingText class={phoneTitle}>
+                  {props.title(
+                    props.list() as SettingsList<never>,
+                    props.page()!,
+                  )}
+                </OverflowingText>
+                <Show when={props.onClose}>
+                  <IconButton
+                    onPress={props.onClose}
+                    use:floating={{
+                      tooltip: {
+                        placement: "bottom",
+                        content: t`Close settings`,
+                      },
+                    }}
+                  >
+                    <MdClose />
+                  </IconButton>
+                </Show>
+              </PhoneBar>
+            </Show>
+            <Show when={!phone() && props.page() !== "account"}>
               <Text class="title" size="large">
                 <Breadcrumbs
                   elements={props.page()!.split("/")}
@@ -50,8 +103,8 @@ export function SettingsContent(props: {
         </InnerContent>
       </Show>
       <ActionRail>
-        <Show when={props.onClose}>
-          <CloseAction class="close">
+        <Show when={!phone() && props.onClose}>
+          <CloseAction class="close" tablet={layout() === "tablet"}>
             <IconButton variant="tonal" onPress={props.onClose}>
               <MdClose />
             </IconButton>
@@ -196,9 +249,53 @@ const FloatingActions = styled("div", {
 });
 
 /**
+ * Top bar of a settings page on phones
+ */
+const PhoneBar = styled("div", {
+  base: {
+    position: "sticky",
+    top: 0,
+    zIndex: 3,
+
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--gap-sm)",
+    minHeight: "56px",
+    marginInline: "-4px",
+
+    background: "var(--md-sys-color-surface-container-low)",
+  },
+});
+
+/**
+ * Title in the phone top bar
+ */
+const phoneTitle = css({
+  flexGrow: 1,
+  minWidth: 0,
+  fontSize: "1.25rem",
+  fontWeight: 500,
+});
+
+/**
  * Positioning for close button
  */
 const CloseAction = styled("div", {
+  variants: {
+    // the action rail sits bottom-end on tablets, so pin close to the top
+    tablet: {
+      true: {
+        position: "fixed",
+        top: "calc(12px + var(--inset-top))",
+        insetInlineEnd: "calc(12px + var(--inset-right))",
+
+        "&:after": {
+          display: "none",
+        },
+      },
+      false: {},
+    },
+  },
   base: {
     visibility: "visible",
 
@@ -211,10 +308,6 @@ const CloseAction = styled("div", {
       fontWeight: 600,
       color: "var(--md-sys-color-on-surface)",
       fontSize: "0.75rem",
-    },
-
-    _tablet: {
-      display: "none",
     },
   },
 });

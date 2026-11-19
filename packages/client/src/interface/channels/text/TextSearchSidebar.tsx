@@ -13,6 +13,10 @@ import { Button, CircularProgress, Row } from "@revolt/ui";
 export function TextSearchSidebar(props: {
   channel: Channel;
   query: Omit<API.DataMessageSearch, "include_users">;
+  /**
+   * Handle picking a result yourself instead of following the link
+   */
+  onPick?: (path: string) => void;
 }) {
   const [sort, setSort] = createSignal<API.DataMessageSearch["sort"]>("Latest");
 
@@ -63,7 +67,15 @@ export function TextSearchSidebar(props: {
       <Suspense fallback={<CircularProgress />}>
         <For each={query.data}>
           {(message) => (
-            <a href={message.path}>
+            <a
+              href={message.path}
+              onClick={(e) => {
+                if (props.onPick) {
+                  e.preventDefault();
+                  props.onPick(message.path);
+                }
+              }}
+            >
               <Message message={message} isLink />
             </a>
           )}

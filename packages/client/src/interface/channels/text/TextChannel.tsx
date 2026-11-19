@@ -206,24 +206,30 @@ export function TextChannel(props: ChannelPageProps) {
 
   const closeSidebar = () => setSidebarState({ state: "default" });
 
-  // On phones, picking a search result or pin should reveal the chat
-  // underneath so the highlighted message can actually be seen
-  createEffect(
-    on(
-      highlightMessageId,
-      (messageId) => {
-        const current = sidebarState().state;
-        if (
-          messageId &&
-          phone() &&
-          (current === "search" || current === "pins")
-        ) {
-          closeSidebar();
-        }
-      },
-      { defer: true },
-    ),
-  );
+  /**
+   * On phones, picking a search result or pin has to reveal the chat before
+   * jumping, otherwise the highlighted message is hidden behind the page
+   */
+  function pickResult(path: string) {
+    // Dismiss the keyboard first: on iOS it resizes the viewport as it
+    // closes, which would interrupt the scroll to the message
+    const focused = document.activeElement;
+    const keyboardOpen =
+      focused instanceof HTMLInputElement ||
+      focused instanceof HTMLTextAreaElement;
+    if (focused instanceof HTMLElement) focused.blur();
+
+    closeSidebar();
+
+    // picking the message that is already highlighted wouldn't change the
+    // route, so clear it first to jump again
+    if (highlightMessageId() && path.endsWith(`/${highlightMessageId()}`)) {
+      navigate(".");
+    }
+
+    // let the layout settle before jumping
+    setTimeout(() => navigate(path), keyboardOpen ? 400 : 50);
+  }
 
   /**
    * Title for the full-screen sidebar on phones
@@ -383,6 +389,7 @@ export function TextChannel(props: ChannelPageProps) {
                     query={{
                       query: (sidebarState() as { query: string }).query,
                     }}
+                    onPick={phone() ? pickResult : undefined}
                   />
                 </WideSidebarContainer>
               </Match>
@@ -398,6 +405,7 @@ export function TextChannel(props: ChannelPageProps) {
                   <TextSearchSidebar
                     channel={props.channel}
                     query={{ pinned: true, sort: "Latest" }}
+                    onPick={phone() ? pickResult : undefined}
                   />
                 </WideSidebarContainer>
               </Match>

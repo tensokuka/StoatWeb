@@ -1,8 +1,12 @@
 import { Accessor, For, Setter, Show, onMount } from "solid-js";
 
+import { Trans, useLingui } from "@lingui/solid/macro";
 import { styled } from "styled-system/jsx";
 
-import { Column, OverflowingText } from "@revolt/ui";
+import { useDevice } from "@revolt/common";
+import { Column, IconButton, OverflowingText, Text } from "@revolt/ui";
+
+import MdClose from "@material-design-icons/svg/outlined/close.svg?component-solid";
 
 // import MdError from "@material-design-icons/svg/filled/error.svg?component-solid";
 // import MdOpenInNew from "@material-design-icons/svg/filled/open_in_new.svg?component-solid";
@@ -22,8 +26,11 @@ export function SettingsSidebar(props: {
   list: Accessor<SettingsList<unknown>>;
   setPage: Setter<string | undefined>;
   page: Accessor<string | undefined>;
+  onClose?: () => void;
 }) {
   const { navigate } = useSettingsNavigation();
+  const { layout } = useDevice();
+  const { t } = useLingui();
 
   /**
    * Select first page on load
@@ -38,6 +45,21 @@ export function SettingsSidebar(props: {
     <Base class="settings_sidebar">
       <div use:invisibleScrollable>
         <Content class="content">
+          <Show when={layout() === "phone" && props.onClose}>
+            <PhoneBar>
+              <Text class="title" size="large">
+                <Trans>Settings</Trans>
+              </Text>
+              <IconButton
+                onPress={props.onClose}
+                use:floating={{
+                  tooltip: { placement: "bottom", content: t`Close settings` },
+                }}
+              >
+                <MdClose />
+              </IconButton>
+            </PhoneBar>
+          </Show>
           <Column gap="lg">
             {props.list().prepend}
             <For each={props.list().entries}>
@@ -143,6 +165,20 @@ const Content = styled("div", {
       padding: "8px 0",
       maxWidth: "unset",
     },
+  },
+});
+
+/**
+ * Title and close button above the list on phones
+ */
+const PhoneBar = styled("div", {
+  base: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: "56px",
+    paddingInline: "8px 12px",
+    marginBlockEnd: "var(--gap-md)",
   },
 });
 
