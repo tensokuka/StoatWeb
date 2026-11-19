@@ -39,3 +39,20 @@ export function ownsHorizontalGesture(
 
   return false;
 }
+
+/** Touches another gesture has taken over, by touch identifier */
+const claimedTouches = new Set<number>();
+
+/**
+ * Take a touch away from the drawer, once a gesture of its own is recognised
+ * (swiping a message to reply). Release it when the touch ends.
+ */
+export function claimTouch(id: number) {
+  claimedTouches.add(id);
+  return () => claimedTouches.delete(id);
+}
+
+/** Whether another gesture has taken this touch */
+export function isTouchClaimed(id: number) {
+  return claimedTouches.has(id);
+}

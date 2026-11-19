@@ -10,6 +10,7 @@ import { SetStoreFunction, createStore } from "solid-js/store";
 
 import type { MFA, MFATicket } from "stoat.js";
 
+import { backStack } from "@revolt/common";
 import { Keybind, KeybindAction } from "@revolt/keybinds";
 import { dismissFloatingElements } from "@revolt/ui";
 
@@ -39,6 +40,8 @@ export type ActiveModal = {
 export class ModalController {
   modals: ActiveModal[];
   setModals: SetStoreFunction<ActiveModal[]>;
+  /** Stops Back closing a modal, by modal id */
+  #backReleases = new Map<string, () => void>();
 
   /**
    * Construct controller
@@ -65,6 +68,13 @@ export class ModalController {
         props,
       },
     ]);
+    // Back closes the top modal
+    if (backStack) {
+      this.#backReleases.set(
+        id,
+        backStack.open(() => this.remove(id)),
+      );
+    }
     dismissFloatingElements();
     // after modal commits to DOM,
     // we can begin animations!
@@ -105,6 +115,8 @@ export class ModalController {
    * Close modal by id
    */
   remove = (id: string) => {
+    this.#backReleases.get(id)?.();
+    this.#backReleases.delete(id);
     this.setModals((entry) => entry.id === id, "show", false);
 
     setTimeout(() => {

@@ -3,7 +3,9 @@ import {
   Component,
   ComponentProps,
   createSignal,
+  getOwner,
   JSX,
+  runWithOwner,
   Show,
   splitProps,
 } from "solid-js";
@@ -13,7 +15,7 @@ import { Motion, Presence } from "solid-motionone";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { styled } from "styled-system/jsx";
 
-import { iconSize, symbolSize, Text } from "@revolt/ui";
+import { iconSize, symbolSize, Text, useMenuSheet } from "@revolt/ui";
 import { fitToViewport } from "@revolt/ui/components/floating/fitToViewport";
 
 import MdChevronRight from "@material-design-icons/svg/outlined/chevron_right.svg?component-solid";
@@ -32,11 +34,26 @@ const Base = styled("div", {
 
     userSelect: "none",
   },
+  variants: {
+    // in a phone bottom sheet, which provides the surface and scrolling
+    sheet: {
+      true: {
+        padding: 0,
+        overflow: "visible",
+        borderRadius: 0,
+        background: "transparent",
+        boxShadow: "none",
+      },
+    },
+  },
 });
 
 export function ContextMenu(props: ComponentProps<typeof Base>) {
+  const sheet = useMenuSheet();
+
   return (
     <Base
+      sheet={!!sheet}
       // prevent context menu closing itself before click event
       onpointerdown={(e) => e.stopImmediatePropagation()}
       {...props}
@@ -140,13 +157,16 @@ export function ContextMenuButton(props: ButtonProps) {
     "children",
   ]);
 
+  // bigger icons for the large rows of a phone sheet
+  const size = useMenuSheet() ? 22 : 16;
+
   return (
     <ContextMenuItem button {...remote}>
       {typeof local.icon === "function"
-        ? local.icon?.(iconSize(16))
+        ? local.icon?.(iconSize(size))
         : local.icon}
       {typeof local.symbol === "function"
-        ? local.symbol(symbolSize(16))
+        ? local.symbol(symbolSize(size))
         : local.symbol}
       <Text>{local.children}</Text>
       {typeof local.actionIcon === "function"
@@ -170,6 +190,10 @@ export function ContextMenuSubMenu(
 ) {
   const [anchor, setAnchor] = createSignal<HTMLDivElement>();
   const [ref, setRef] = createSignal<HTMLDivElement>();
+  const sheet = useMenuSheet();
+  // the page is built from a tap handler, so give it this menu's context
+  // (translations and the like)
+  const owner = getOwner();
 
   const [show, setShow] = createSignal<"hide" | "show" | boolean>(false);
   const [local, buttonProps] = splitProps(props, [
@@ -211,6 +235,17 @@ export function ContextMenuSubMenu(
         onClick={(e) => {
           if (local.onClick) {
             local.onClick();
+          } else if (sheet) {
+            // on phones the submenu replaces the menu, with a way back
+            e.stopImmediatePropagation();
+            sheet.openPage(
+              // eslint-disable-next-line solid/reactivity -- read when the page renders
+              () => runWithOwner(owner, () => local.buttonContent),
+              () =>
+                runWithOwner(owner, () => (
+                  <ContextMenu>{local.children}</ContextMenu>
+                )),
+            );
           } else {
             e.stopImmediatePropagation();
             setShow(isShowing() ? false : "show");
@@ -229,7 +264,8 @@ export function ContextMenuSubMenu(
       </ContextMenuButton>
       <Portal mount={document.getElementById("floating")!}>
         <Presence>
-          <Show when={isShowing()}>
+          {/* the sheet shows submenus itself */}
+          <Show when={!sheet && isShowing()}>
             <Motion
               ref={setRef}
               style={{

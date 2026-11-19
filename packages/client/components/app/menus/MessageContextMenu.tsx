@@ -27,13 +27,14 @@ import MdShield from "@material-design-icons/svg/outlined/shield.svg?component-s
 
 import { Trans, useLingui } from "@lingui/solid/macro";
 import MdSentimentContent from "@material-symbols/svg-400/outlined/sentiment_content.svg?component-solid";
-import { useSnackbar } from "@revolt/ui";
+import { useMenuSheet, useSnackbar } from "@revolt/ui";
 import {
   ContextMenu,
   ContextMenuButton,
   ContextMenuDivider,
   ContextMenuSubMenu,
 } from "./ContextMenu";
+import { QuickReactions } from "./QuickReactions";
 
 /**
  * Context menu for messages
@@ -51,6 +52,7 @@ export function MessageContextMenu(props: {
   const snackbar = useSnackbar();
   const { t } = useLingui();
   const { openModal, showError } = useModals();
+  const sheet = useMenuSheet();
 
   /**
    * Reply to this message
@@ -287,6 +289,17 @@ export function MessageContextMenu(props: {
         <ContextMenuDivider />
       </Show>
       <Show when={props.message}>
+        {/* one-tap reactions at the top of the phone sheet */}
+        <Show when={sheet && props.message!.channel?.havePermission("React")}>
+          <QuickReactions
+            message={props.message!}
+            onMore={
+              props.reactPicker
+                ? (e) => props.reactPicker!()?.onClickEmoji(e)
+                : undefined
+            }
+          />
+        </Show>
         <Show when={props.message!.channel?.havePermission("SendMessage")}>
           <ContextMenuButton icon={MdReply} onClick={reply}>
             <Trans>Reply</Trans>
