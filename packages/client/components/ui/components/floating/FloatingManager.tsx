@@ -14,6 +14,8 @@ import { Presence } from "solid-motionone";
 
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 
+import { fitToViewport } from "./fitToViewport";
+
 import { Keybind, KeybindAction } from "@revolt/keybinds";
 
 import { FloatingElement, floatingElements } from "../../directives";
@@ -131,9 +133,21 @@ function Floating(props: FloatingElement & { mouseX: number; mouseY: number }) {
 
   const position = useFloating(element, floating, {
     placement: placement(),
-    middleware: [offset(5), flip(), shift()],
+    middleware: props.show()?.contextMenu
+      ? // keep long menus on screen: cap to the viewport and scroll inside
+        [
+          offset(5),
+          flip({ padding: 8 }),
+          shift({ padding: 8 }),
+          fitToViewport(),
+        ]
+      : [offset(5), flip(), shift()],
+    // context menus are re-positioned too, so content rendering after
+    // opening or the phone rotating doesn't leave them off screen
     whileElementsMounted:
-      props.show()?.tooltip || props.show()?.autoComplete
+      props.show()?.tooltip ||
+      props.show()?.autoComplete ||
+      props.show()?.contextMenu
         ? autoUpdate
         : undefined,
   });

@@ -13,6 +13,7 @@ import { useLingui } from "@lingui/solid/macro";
 import type { Channel, Server, ServerFlags } from "stoat.js";
 import { styled } from "styled-system/jsx";
 
+import { ServerContextMenu } from "@revolt/app";
 import { getChannelIcon, useDevice } from "@revolt/common";
 import { KeybindAction, createKeybind } from "@revolt/keybinds";
 import { TextWithEmoji } from "@revolt/markdown";
@@ -322,6 +323,15 @@ function ServerInfo(
     canManageServer: boolean;
   },
 ) {
+  const { t } = useLingui();
+  const { layout, isMobile, hasCoarsePointer } = useDevice();
+
+  /**
+   * Touch has no right-click, so give the server menu a visible way in
+   */
+  const showMenuButton = () =>
+    layout() === "phone" || isMobile || hasCoarsePointer;
+
   return (
     <Row align grow minWidth={0}>
       <ServerBadge flags={props.server.flags} />
@@ -336,6 +346,23 @@ function ServerInfo(
           onPress={props.openServerSettings}
         >
           <MdSettings {...symbolSize(24)} />
+        </IconButton>
+      </Show>
+      <Show when={showMenuButton()}>
+        <IconButton
+          size="xs"
+          width="narrow"
+          variant={props.server.banner ? "_header" : "standard"}
+          use:floating={{
+            contextMenu: () => <ServerContextMenu server={props.server} />,
+            contextMenuHandler: "click",
+            tooltip: {
+              placement: "bottom",
+              content: t`More options`,
+            },
+          }}
+        >
+          <Symbol>more_vert</Symbol>
         </IconButton>
       </Show>
     </Row>

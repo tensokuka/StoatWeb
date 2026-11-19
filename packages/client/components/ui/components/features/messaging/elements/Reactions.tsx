@@ -223,6 +223,11 @@ const ReactionBase = styled("div", {
     padding: "var(--gap-md)",
     borderRadius: "var(--borderRadius-md)",
 
+    _coarse: {
+      minHeight: "40px",
+      alignItems: "center",
+    },
+
     transition: "var(--transitions-fast) all",
     fontWeight: 600,
     fontFeatureSettings: "'tnum' 1",
@@ -269,6 +274,9 @@ const AddReaction = styled(ReactionBase, {
     height: "33px",
     aspectRatio: "1/1",
     padding: "var(--gap-sm)",
+    _coarse: {
+      height: "40px",
+    },
   },
 });
 

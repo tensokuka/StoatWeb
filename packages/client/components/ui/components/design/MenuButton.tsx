@@ -176,10 +176,16 @@ const base = cva({
       normal: {
         height: "42px",
         gap: "var(--gap-md)",
+        _coarse: {
+          height: "48px",
+        },
       },
       thin: {
         height: "32px",
         gap: "var(--gap-sm)",
+        _coarse: {
+          height: "44px",
+        },
 
         // implicitly align center since we won't stack anything
         alignItems: "center",

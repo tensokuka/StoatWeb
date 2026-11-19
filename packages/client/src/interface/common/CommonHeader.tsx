@@ -20,8 +20,12 @@ export function HeaderIcon(props: { children: JSX.Element }) {
   const { t } = useLingui();
 
   return (
-    <div
+    <button
+      type="button"
       class={container}
+      aria-label={
+        state.appDrawer() ? t`Back to channel list` : t`Toggle main sidebar`
+      }
       onClick={() => {
         const ad = state.appDrawer();
         if (ad) ad.setShown(false);
@@ -59,7 +63,7 @@ export function HeaderIcon(props: { children: JSX.Element }) {
           {props.children}
         </Match>
       </Switch>
-    </div>
+    </button>
   );
 }
 
@@ -67,4 +71,23 @@ const container = css({
   display: "flex",
   cursor: "pointer",
   alignItems: "center",
+  flexShrink: 0,
+
+  // reset button styles
+  border: "none",
+  padding: 0,
+  background: "none",
+  color: "inherit",
+  fill: "currentColor",
+  font: "inherit",
+
+  // the back arrow is the main way to the channel list on phones,
+  // so give it a full 48px target (negative margin keeps the layout put)
+  _coarse: {
+    minWidth: "48px",
+    minHeight: "48px",
+    marginBlock: "-8px",
+    marginInlineStart: "-12px",
+    paddingInlineStart: "12px",
+  },
 });
