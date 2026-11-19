@@ -10,6 +10,7 @@ import { scrollableStyles } from "../../../directives/scrollable";
 import { AutoCompleteSearchSpace } from "../../utils/autoComplete";
 
 import { useDevice } from "@revolt/common";
+import { useState } from "@revolt/state";
 import { codeMirrorAutoComplete } from "./codeMirrorAutoComplete";
 import { isInFencedCodeBlock } from "./codeMirrorCommon";
 import { smartLineWrapping } from "./codeMirrorLineWrap";
@@ -74,7 +75,8 @@ const placeholderCompartment = new Compartment();
 export function TextEditor2(props: Props) {
   const editorScrollbarClasses = scrollableStyles();
 
-  const { isMobile } = useDevice();
+  const { isMobile, hasCoarsePointer } = useDevice();
+  const state = useState();
   const codeMirror = document.createElement("div");
   codeMirror.className = editor;
 
@@ -82,24 +84,37 @@ export function TextEditor2(props: Props) {
   codeMirror.style.minWidth = "0";
 
   /**
-   * Handle 'Enter' key presses
-   * Submit only if not currently in a code block
+   * Send, unless currently in a code block
+   */
+  function submit(view: EditorView) {
+    if (!props.onComplete) return false;
+
+    const cursor = view.state.selection.main;
+    if (!isInFencedCodeBlock(view.state, cursor.from, cursor.to)) {
+      props.onComplete();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Handle 'Enter' key presses: Enter sends if the user's setting says so
+   * (by default on desktop, not on touchscreens), Ctrl+Enter always does.
+   * Read on each press so changing the setting applies straight away.
    */
   const enterKeymap = keymap.of([
     {
-      key: isMobile ? "Ctrl-Enter" : "Enter",
+      key: "Enter",
+      run: (view) =>
+        state.settings.enterSends(isMobile || hasCoarsePointer)
+          ? submit(view)
+          : false,
+    },
+    {
       //TODO Ctrl-Enter is only detected on Firefox mobile, not Chrome mobile
-      run: (view) => {
-        if (!props.onComplete) return false;
-
-        const cursor = view.state.selection.main;
-        if (!isInFencedCodeBlock(view.state, cursor.from, cursor.to)) {
-          props.onComplete();
-          return true;
-        } else {
-          return false;
-        }
-      },
+      key: "Mod-Enter",
+      run: submit,
     },
   ]);
 

@@ -5,6 +5,7 @@ import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
 import { useUser } from "@revolt/client";
+import { useDevice } from "@revolt/common";
 import {
   UNICODE_EMOJI_PACKS,
   UnicodeEmoji,
@@ -41,6 +42,7 @@ import MDPalette from "@material-design-icons/svg/outlined/palette.svg?component
 export function AppearanceMenu() {
   const user = useUser();
   const state = useState();
+  const device = useDevice();
   const { t } = useLingui();
   const [pickerRef, setPickerRef] = createSignal<HTMLDivElement>();
 
@@ -409,6 +411,20 @@ export function AppearanceMenu() {
           }
         >
           <Trans>Show send message button</Trans>
+        </Checkbox>
+
+        <Checkbox
+          checked={state.settings.enterSends(
+            device.isMobile || device.hasCoarsePointer,
+          )}
+          onChange={(event) =>
+            state.settings.setValue(
+              "input:enter_sends",
+              event.currentTarget.checked,
+            )
+          }
+        >
+          <Trans>Send messages with Enter (Shift+Enter adds a line)</Trans>
         </Checkbox>
 
         <FloatingSelect
