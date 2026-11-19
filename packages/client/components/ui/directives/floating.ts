@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 
 import { addLongPressListener } from "./longPress";
-import { addPressFeedback, longPressVibrate } from "./pressFeedback";
+import { addPressFeedback, longPressVibrate } from "../gestures/pressFeedback";
 
 type Props = JSX.Directives["floating"] & object;
 

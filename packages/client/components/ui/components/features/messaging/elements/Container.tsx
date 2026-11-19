@@ -15,7 +15,7 @@ import {
   Time,
 } from "@revolt/ui/components/utils";
 
-import { addSwipeToReply } from "../../../../directives/swipeToReply";
+import { addSwipeToReply } from "../../../../gestures/swipeToReply";
 
 import { MessageToolbar } from "./MessageToolbar";
 
