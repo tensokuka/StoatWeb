@@ -61,6 +61,8 @@ export default defineConfig({
         type: "module",
       },
       manifest: {
+        // stable identity for the installed app, whatever start_url becomes
+        id: base,
         name: "Stoat",
         short_name: "Stoat",
         description: "User-first open source chat platform.",
@@ -95,7 +97,36 @@ export default defineConfig({
             purpose: "maskable",
           },
         ],
-        // TODO: take advantage of shortcuts
+        // long press on the app icon
+        shortcuts: [
+          {
+            name: "Friends",
+            url: `${base}friends`,
+            icons: [
+              {
+                src: `${base}assets/web/android-chrome-192x192.png`,
+                sizes: "192x192",
+              },
+            ],
+          },
+          {
+            name: "Settings",
+            url: `${base}settings`,
+            icons: [
+              {
+                src: `${base}assets/web/android-chrome-192x192.png`,
+                sizes: "192x192",
+              },
+            ],
+          },
+        ],
+        // appears in Android's share sheet: text and links open a picker
+        // for which conversation to send them to
+        share_target: {
+          action: `${base}share`,
+          method: "GET",
+          params: { title: "title", text: "text", url: "url" },
+        },
       },
     }),
   ],
