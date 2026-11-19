@@ -317,6 +317,12 @@ export function NotificationsWorker() {
     if (!client().ready() || started) return;
     started = true;
 
+    // Already allowed: check the push subscription straight away
+    if ("Notification" in window && Notification.permission === "granted") {
+      initNotifications();
+      return;
+    }
+
     if (!needsAsking()) {
       document.addEventListener("click", tryRequest);
       return;

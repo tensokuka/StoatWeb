@@ -95,6 +95,16 @@ export function useNotifications() {
       // on every launch, and iOS keeps each sample in Notification Center.
       await enablePushSubscription();
     } else if (
+      permissionGranted &&
+      settings.pushNotificationsState === "allowed"
+    ) {
+      // Everything looks set up, but the browser can replace or drop a
+      // subscription without telling the server, so send it again. Cheap,
+      // and quiet if it fails.
+      await setUpServiceWorkerSubscription(getClient()).catch((e) =>
+        console.warn("[push] Couldn't refresh the push subscription", e),
+      );
+    } else if (
       settings.desktopNotificationsState === "default" ||
       (await notificationStateMismatch())
     ) {

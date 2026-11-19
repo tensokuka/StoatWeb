@@ -34,6 +34,41 @@ self.addEventListener("notificationclick", (event) => {
   }
 });
 
+/**
+ * The browser can replace a subscription (expiry, key rotation). Take a new
+ * one with the same key; the app sends it to the server on its next launch.
+ */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const change = event as Event & {
+    oldSubscription?: PushSubscription | null;
+    waitUntil(promise: Promise<unknown>): void;
+  };
+
+  change.waitUntil(
+    (async () => {
+      const key = change.oldSubscription?.options.applicationServerKey;
+      let detail = "no previous key, waiting for the app to resubscribe";
+      if (key) {
+        try {
+          await self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: key,
+          });
+          detail = "resubscribed";
+        } catch (e) {
+          detail = `resubscribing failed: ${e}`;
+        }
+      }
+      await addPushLog({
+        time: Date.now(),
+        kind: "error",
+        scope: self.registration.scope,
+        detail: `subscription changed by the browser, ${detail}`,
+      });
+    })(),
+  );
+});
+
 self.addEventListener("push", (event) => {
   event.waitUntil(handlePush(event));
 });
