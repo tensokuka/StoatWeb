@@ -9,4 +9,5 @@ export {
   isPanelChannel,
   stripPanelMarker,
 } from "./lib/panel";
+export { saveFile } from "./lib/shareFile";
 export { insecureUniqueId } from "./lib/unique";

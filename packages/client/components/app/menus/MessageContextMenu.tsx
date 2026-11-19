@@ -3,6 +3,7 @@ import { Accessor, For, Match, Show, Switch } from "solid-js";
 import { File, ImageEmbed, Message, VideoEmbed, WebsiteEmbed } from "stoat.js";
 
 import { useClient, useUser } from "@revolt/client";
+import { saveFile } from "@revolt/common";
 import { useInstance } from "@revolt/instance";
 import { CustomEmoji, UnicodeEmoji } from "@revolt/markdown/emoji";
 import { useModals } from "@revolt/modal";
@@ -262,15 +263,17 @@ export function MessageContextMenu(props: {
           <Trans>Copy link to file</Trans>
         </ContextMenuButton>
         <Show when={props.file instanceof File}>
-          <a
-            target="_blank"
-            download={(props.file as File)?.filename}
-            href={(props.file as File)?.originalUrl}
+          <ContextMenuButton
+            icon={MdDownload}
+            onClick={() =>
+              saveFile(
+                (props.file as File).originalUrl,
+                (props.file as File).filename,
+              )
+            }
           >
-            <ContextMenuButton icon={MdDownload}>
-              <Trans>Save file</Trans>
-            </ContextMenuButton>
-          </a>
+            <Trans>Save file</Trans>
+          </ContextMenuButton>
           <ContextMenuButton
             icon={MdContentCopy}
             onClick={() => copyFile((props.file as File)!.originalUrl)}
