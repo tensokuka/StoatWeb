@@ -48,7 +48,8 @@ export default defineConfig({
     }),
     VitePWA({
       srcDir: "src",
-      registerType: "autoUpdate",
+      // the new version waits until the user chooses to reload (W8)
+      registerType: "prompt",
       filename: "serviceWorker.ts",
       strategies: "injectManifest",
       injectManifest: {

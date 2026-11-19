@@ -23,6 +23,7 @@ import FlowResend from "@revolt/auth/src/flows/FlowResend";
 import FlowReset from "@revolt/auth/src/flows/FlowReset";
 import FlowVerify from "@revolt/auth/src/flows/FlowVerify";
 import { ClientContext, SoundContext, useClient } from "@revolt/client";
+import { UpdatePrompt } from "@revolt/client/UpdatePrompt";
 import { DeviceContext } from "@revolt/common";
 import { I18nProvider } from "@revolt/i18n";
 import { InstanceContext } from "@revolt/instance";
@@ -213,6 +214,8 @@ if (!escapeSelfEmbed())
       <DeviceContext>
         <I18nProvider>
           <SnackbarProvider controller={snackbarCtrl}>
+            {/* outside the client, so it works even if it can't connect */}
+            <UpdatePrompt />
             <Router>
               <Route path="/i/:host" component={InstanceContext}>
                 {routes()}
