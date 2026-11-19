@@ -40,6 +40,7 @@ import { Device, useDevice } from "@revolt/common";
 import { InRoom } from "./components/InRoom";
 import { RoomAudioManager } from "./components/RoomAudioManager";
 import { DrawingController } from "./drawing";
+import { setCallMediaSession, setCallMediaState } from "./mediaSession";
 import { VoiceProcessor } from "./VoiceProcessor";
 
 type State =
@@ -207,6 +208,16 @@ class Voice {
         track.restartTrack();
       }
     };
+
+    // Lock screen / OS media controls for the call
+    createEffect(() =>
+      setCallMediaSession(this.channel(), {
+        hangup: () => this.disconnect(),
+        toggleMicrophone: () => void this.toggleMute(),
+        toggleCamera: () => void this.toggleCamera(),
+      }),
+    );
+    createEffect(() => setCallMediaState(this.microphone(), this.video()));
 
     createEffect(() => {
       setEchoCancellation(getSettings().echoCancellation ?? true);
