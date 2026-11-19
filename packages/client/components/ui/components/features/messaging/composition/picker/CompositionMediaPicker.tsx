@@ -19,7 +19,7 @@ import type { Channel } from "stoat.js";
 import { cva } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
-import { useDevice } from "@revolt/common";
+import { useBackHandler, useDevice } from "@revolt/common";
 import { Button } from "@revolt/ui/components/design";
 import { Row } from "@revolt/ui/components/layout";
 
@@ -63,6 +63,11 @@ export function CompositionMediaPicker(props: Props) {
   const [anchor, setAnchor] = createSignal<HTMLElement>();
   const [show, setShow] = createSignal<"gif" | "emoji">();
   let altRef: HTMLDivElement | undefined;
+
+  useBackHandler(
+    () => !!show(),
+    () => setShow(undefined),
+  );
 
   return (
     <CompositionMediaPickerContext.Provider

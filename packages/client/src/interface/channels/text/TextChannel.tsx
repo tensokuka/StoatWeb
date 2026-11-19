@@ -15,7 +15,7 @@ import { decodeTime, ulid } from "ulid";
 
 import { DraftMessages, Messages } from "@revolt/app";
 import { useClient } from "@revolt/client";
-import { useDevice } from "@revolt/common";
+import { useBackHandler, useDevice } from "@revolt/common";
 import { Keybind, KeybindAction, createKeybind } from "@revolt/keybinds";
 import { useNavigate, useSmartParams } from "@revolt/routing";
 import { useState } from "@revolt/state";
@@ -205,6 +205,12 @@ export function TextChannel(props: ChannelPageProps) {
         sidebarState().state !== "default";
 
   const closeSidebar = () => setSidebarState({ state: "default" });
+
+  // On phones the sidebar is a page of its own, so Back closes it
+  useBackHandler(
+    () => phone() && sidebarState().state !== "default",
+    closeSidebar,
+  );
 
   /**
    * On phones, picking a search result or pin has to reveal the chat before

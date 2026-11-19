@@ -1,4 +1,4 @@
-import { useDevice } from "@revolt/common";
+import { useBackHandler, useDevice } from "@revolt/common";
 import {
   type Accessor,
   type JSX,
@@ -67,6 +67,12 @@ export function floating(element: HTMLElement, accessor: Accessor<Props>) {
       setShow(undefined);
     },
   });
+
+  // Back closes menus and user cards
+  useBackHandler(
+    () => !!(show()?.contextMenu || show()?.userCard),
+    () => setShow(undefined),
+  );
 
   /**
    * Trigger a floating element

@@ -1,12 +1,13 @@
 import {
   Accessor,
   createEffect,
+  createMemo,
   createRoot,
   createSignal,
   Setter,
 } from "solid-js";
 
-import { useDevice } from "@revolt/common";
+import { useBackHandler, useDevice } from "@revolt/common";
 
 import { ownsHorizontalGesture } from "./slideDrawerGuard";
 
@@ -89,6 +90,17 @@ export class SlideDrawer {
       createEffect(() => {
         this.enabled = dev.layout() === "phone";
       });
+
+      //Back slides the drawer away (channel -> channel list); a drag in
+      //progress keeps whatever it started from
+      const slidIn = createMemo<boolean>((prev = false) => {
+        if (!this.eGet()) return false;
+        const s = this.sGet();
+        if (s === SlideState.MOVING) return prev;
+        return s === SlideState.SHOWN || s === SlideState.SHOWING;
+      });
+      // eslint-disable-next-line solid/reactivity -- read in an effect
+      useBackHandler(slidIn, () => this.setShown(false));
     });
   }
 
