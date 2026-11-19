@@ -5,12 +5,12 @@ import {
   Match,
   Show,
   Switch,
+  createMemo,
   createSignal,
   onCleanup,
   onMount,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { Presence } from "solid-motionone";
 
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 
@@ -56,28 +56,28 @@ export function FloatingManager() {
   const sheetMenus = () => layout() === "phone";
 
   /**
+   * Only the open ones are rendered, not a component for every trigger on
+   * screen (P4)
+   */
+  const open = createMemo(() => floatingElements().filter((el) => el.show()));
+
+  /**
    * Whether a floating element is visible
    */
   function anyVisible() {
-    return floatingElements().find((el) => el.show());
+    return open().length > 0;
   }
 
   return (
     <Portal mount={document.getElementById("floating")!}>
-      <For each={floatingElements()}>
+      <For each={open()}>
         {(element) => (
-          <Presence>
-            <Show when={element.show()}>
-              <Show
-                when={sheetMenus() && element.show()?.contextMenu}
-                fallback={
-                  <Floating {...element} mouseX={mouseX} mouseY={mouseY} />
-                }
-              >
-                <SheetMenu {...element} />
-              </Show>
-            </Show>
-          </Presence>
+          <Show
+            when={sheetMenus() && element.show()?.contextMenu}
+            fallback={<Floating {...element} mouseX={mouseX} mouseY={mouseY} />}
+          >
+            <SheetMenu {...element} />
+          </Show>
         )}
       </For>
 
