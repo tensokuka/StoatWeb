@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { userIdFromScope } from "../components/client/pushScope";
+import { bumpAppBadge } from "./appBadge";
 import { openNotificationUrl } from "./notificationClick";
 import { addPushLog } from "./pushLog";
 
@@ -132,6 +133,9 @@ async function handlePush(event: PushEvent) {
       detail: `reading the push failed, showing a generic one: ${e}`,
     });
   }
+
+  // a quiet push replaces one already counted
+  if (!options.silent) await bumpAppBadge();
 
   try {
     await self.registration.showNotification(title, options);
