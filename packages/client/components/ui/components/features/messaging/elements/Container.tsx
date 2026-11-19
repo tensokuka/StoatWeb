@@ -1,4 +1,4 @@
-import { JSX, Match, Show, Switch } from "solid-js";
+import { JSX, Match, Show, Switch, onCleanup, onMount } from "solid-js";
 
 import { useLingui } from "@lingui/solid/macro";
 import { cva } from "styled-system/css";
@@ -14,6 +14,8 @@ import {
   Symbol,
   Time,
 } from "@revolt/ui/components/utils";
+
+import { addSwipeToReply } from "../../../../directives/swipeToReply";
 
 import { MessageToolbar } from "./MessageToolbar";
 
@@ -106,6 +108,11 @@ type Props = CommonProps & {
    * Component to render message context menu
    */
   contextMenu?: () => JSX.Element;
+
+  /**
+   * Reply when the message is swiped left on a touchscreen
+   */
+  onSwipeReply?: () => void;
 
   ref?: HTMLDivElement;
 
@@ -332,12 +339,23 @@ const CompactInfo = styled(Row, {
 export function MessageContainer(props: Props) {
   const { t } = useLingui();
   const { message } = useMessage();
-  const { isMobile, isIOSTouch } = useDevice();
+  const { isMobile, isIOSTouch, hasCoarsePointer } = useDevice();
+  let element!: HTMLDivElement;
+
+  onMount(() => {
+    if (hasCoarsePointer && props.onSwipeReply) {
+      // eslint-disable-next-line solid/reactivity -- called from a touch handler
+      onCleanup(addSwipeToReply(element, () => props.onSwipeReply?.()));
+    }
+  });
 
   return (
     <div
       id={message?.id}
-      ref={props.ref}
+      ref={(el) => {
+        element = el;
+        (props.ref as ((el: HTMLDivElement) => void) | undefined)?.(el);
+      }}
       onMouseEnter={() => props.onHover && props.onHover(true)}
       onMouseLeave={() => props.onHover && props.onHover(false)}
       class={

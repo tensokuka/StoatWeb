@@ -9,7 +9,7 @@ import {
 
 import { useBackHandler, useDevice } from "@revolt/common";
 
-import { ownsHorizontalGesture } from "./slideDrawerGuard";
+import { isTouchClaimed, ownsHorizontalGesture } from "./slideDrawerGuard";
 
 const ANIM_MS = 150,
   VEL_MS = 33, //30Hz velocity update
@@ -134,6 +134,10 @@ export class SlideDrawer {
     if (!tNew) return;
 
     t = this.touch;
+
+    //Another gesture took this touch (swipe to reply)
+    if (!t.trig && isTouchClaimed(t.id)) return this.endTouch();
+
     const dy = tNew.screenY - t.y,
       ds = this.drawer.style,
       max = -innerWidth;

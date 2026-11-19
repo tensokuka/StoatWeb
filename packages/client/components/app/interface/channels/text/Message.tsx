@@ -193,6 +193,11 @@ export function Message(props: Props) {
           </div>
         }
         pronouns={pronouns()}
+        onSwipeReply={
+          props.editing || !props.message.channel?.havePermission("SendMessage")
+            ? undefined
+            : () => state.draft.addReply(props.message, client().user!.id)
+        }
         contextMenu={
           props.editing
             ? undefined
