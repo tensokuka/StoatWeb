@@ -1,4 +1,5 @@
 export { FloatingManager } from "./FloatingManager";
+export { MenuSheet, useMenuSheet } from "./MenuSheet";
 export { Tooltip } from "./Tooltip";
 export { UserCard } from "./UserCard";
 

@@ -1,1 +1,15 @@
 @layer reset, base, tokens, recipes, utilities;
+
+/* Items with a long-press menu: no iOS link / image callout on top of ours */
+[data-long-press],
+[data-long-press] a,
+[data-long-press] img {
+  -webkit-touch-callout: none;
+}
+
+/* Shown as soon as a finger rests on one, before the menu opens */
+[data-long-press][data-pressing] {
+  box-shadow: inset 0 0 0 100vmax
+    color-mix(in srgb, var(--md-sys-color-on-surface) 10%, transparent);
+  transition: box-shadow 0.1s;
+}

@@ -16,12 +16,14 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 
 import { fitToViewport } from "./fitToViewport";
 
+import { useDevice } from "@revolt/common";
 import { Keybind, KeybindAction } from "@revolt/keybinds";
 
 import { FloatingElement, floatingElements } from "../../directives";
 
 import { dismissFloatingElements } from ".";
 import { AutoComplete } from "./AutoComplete";
+import { MenuSheet } from "./MenuSheet";
 import { TooltipBase } from "./Tooltip";
 import { UserCard } from "./UserCard";
 
@@ -49,6 +51,10 @@ export function FloatingManager() {
     document.removeEventListener("pointerdown", onMouseMove);
   });
 
+  // On phones, context menus open as a bottom sheet
+  const { layout } = useDevice();
+  const sheetMenus = () => layout() === "phone";
+
   /**
    * Whether a floating element is visible
    */
@@ -62,7 +68,14 @@ export function FloatingManager() {
         {(element) => (
           <Presence>
             <Show when={element.show()}>
-              <Floating {...element} mouseX={mouseX} mouseY={mouseY} />
+              <Show
+                when={sheetMenus() && element.show()?.contextMenu}
+                fallback={
+                  <Floating {...element} mouseX={mouseX} mouseY={mouseY} />
+                }
+              >
+                <SheetMenu {...element} />
+              </Show>
             </Show>
           </Presence>
         )}
@@ -75,6 +88,35 @@ export function FloatingManager() {
         />
       </Show>
     </Portal>
+  );
+}
+
+/**
+ * Render a context menu as a bottom sheet
+ */
+function SheetMenu(props: FloatingElement) {
+  /**
+   * Choosing an item closes the menu, as on desktop
+   */
+  function onClick() {
+    if (props.show()?.contextMenu) props.hide();
+  }
+
+  onMount(() => document.addEventListener("click", onClick));
+  onCleanup(() => document.removeEventListener("click", onClick));
+
+  /**
+   * Other code dismisses menus with a synthetic pointerdown
+   */
+  function onPointerDown(e: Event) {
+    if (!e.defaultPrevented && !(e instanceof PointerEvent)) props.hide();
+  }
+
+  onMount(() => document.addEventListener("pointerdown", onPointerDown));
+  onCleanup(() => document.removeEventListener("pointerdown", onPointerDown));
+
+  return (
+    <MenuSheet onClose={props.hide}>{props.show()!.contextMenu!({})}</MenuSheet>
   );
 }
 

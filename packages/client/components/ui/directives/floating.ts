@@ -9,6 +9,7 @@ import {
 } from "solid-js";
 
 import { addLongPressListener } from "./longPress";
+import { addPressFeedback, longPressVibrate } from "./pressFeedback";
 
 type Props = JSX.Directives["floating"] & object;
 
@@ -132,6 +133,10 @@ export function floating(element: HTMLElement, accessor: Accessor<Props>) {
     event.stopPropagation();
     event.stopImmediatePropagation();
 
+    if ((event as PointerEvent).pointerType === "touch" && !show()) {
+      longPressVibrate();
+    }
+
     trigger("contextMenu");
   }
 
@@ -199,9 +204,17 @@ export function floating(element: HTMLElement, accessor: Accessor<Props>) {
           element.addEventListener(handler, onContextMenu);
           onCleanup(() => element.removeEventListener(handler, onContextMenu));
 
-          // iOS Safari never fires contextmenu for touch, so emulate it with a long press
-          if (handler === "contextmenu" && isIOSTouch) {
-            onCleanup(addLongPressListener(element, onContextMenu));
+          if (handler === "contextmenu") {
+            // iOS Safari never fires contextmenu for touch, so emulate it with a long press
+            if (isIOSTouch) {
+              onCleanup(addLongPressListener(element, onContextMenu));
+            }
+
+            // Show the press straight away, and keep iOS's own link and
+            // image callout from appearing next to our menu
+            element.dataset.longPress = "";
+            onCleanup(addPressFeedback(element));
+            onCleanup(() => delete element.dataset.longPress);
           }
         }
       },
