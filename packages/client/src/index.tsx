@@ -3,7 +3,7 @@
  */
 import "./sentry";
 
-import { JSX, onMount } from "solid-js";
+import { JSX, lazy, onMount } from "solid-js";
 import { render } from "solid-js/web";
 
 import { attachDevtoolsOverlay } from "@solid-devtools/overlay";
@@ -22,6 +22,7 @@ import FlowResend from "@revolt/auth/src/flows/FlowResend";
 import FlowReset from "@revolt/auth/src/flows/FlowReset";
 import FlowVerify from "@revolt/auth/src/flows/FlowVerify";
 import { ClientContext, SoundContext, useClient } from "@revolt/client";
+import { UpdatePrompt } from "@revolt/client/UpdatePrompt";
 import { DeviceContext } from "@revolt/common";
 import { I18nProvider } from "@revolt/i18n";
 import { InstanceContext } from "@revolt/instance";
@@ -43,11 +44,10 @@ import { AndroidNag } from "./AndroidNag";
 import AuthPage from "./Auth";
 import Interface from "./Interface";
 import "./index.css";
-import { DevelopmentPage } from "./interface/Development";
-import { Discover } from "./interface/Discover";
 import { Friends } from "./interface/Friends";
 import { HomePage } from "./interface/Home";
 import { ServerHome } from "./interface/ServerHome";
+import { Share } from "./interface/Share";
 import { ChannelPage } from "./interface/channels/ChannelPage";
 import "./serviceWorkerInterface";
 
@@ -154,6 +154,16 @@ function MountContext(props: { children?: JSX.Element }) {
   );
 }
 
+// Rarely visited pages load on demand (P2)
+const DevelopmentPage = lazy(() =>
+  import("./interface/Development").then((m) => ({
+    default: m.DevelopmentPage,
+  })),
+);
+const Discover = lazy(() =>
+  import("./interface/Discover").then((m) => ({ default: m.Discover })),
+);
+
 const routes = () => (
   <Route component={MountContext}>
     <Route path="/login" component={AuthPage as never}>
@@ -176,6 +186,7 @@ const routes = () => (
       <Route path="/invite/:code" component={InviteRedirect} />
       <Route path="/bot/:code" component={BotRedirect} />
       <Route path="/friends" component={Friends} />
+      <Route path="/share" component={Share} />
       <Route path="/server/:server/*">
         <Route path="/channel/:channel/*" component={ChannelPage} />
         <Route path="/*" component={ServerHome} />
@@ -212,6 +223,8 @@ if (!escapeSelfEmbed())
       <DeviceContext>
         <I18nProvider>
           <SnackbarProvider controller={snackbarCtrl}>
+            {/* outside the client, so it works even if it can't connect */}
+            <UpdatePrompt />
             <Router>
               <Route path="/i/:host" component={InstanceContext}>
                 {routes()}

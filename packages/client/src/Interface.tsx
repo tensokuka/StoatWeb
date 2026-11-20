@@ -15,6 +15,7 @@ import { MessageCache } from "@revolt/app/interface/channels/text/MessageCache";
 import { Titlebar } from "@revolt/app/interface/desktop/Titlebar";
 import { useClient, useClientLifecycle } from "@revolt/client";
 import { ActivityReporter } from "@revolt/client/ActivityReporter";
+import { AppBadge } from "@revolt/client/AppBadge";
 import { State } from "@revolt/client/Controller";
 import { NotificationsWorker } from "@revolt/client/NotificationsWorker";
 import { useModals } from "@revolt/modal";
@@ -135,6 +136,7 @@ const Interface = (props: { children: JSX.Element }) => {
 
         <NotificationsWorker />
         <ActivityReporter />
+        <AppBadge />
       </AppRoot>
     </MessageCache>
   );

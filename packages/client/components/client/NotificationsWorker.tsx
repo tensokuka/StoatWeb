@@ -15,6 +15,7 @@ import {
 import { useDevice } from "@revolt/common";
 import { useNavigate, useSmartParams } from "@revolt/routing";
 import { useState } from "@revolt/state";
+import { useSnackbar } from "@revolt/ui";
 
 import {
   NOTIFICATION_OPEN_MESSAGE,
@@ -33,6 +34,7 @@ export function NotificationsWorker() {
   const navigate = useNavigate();
   const params = useSmartParams();
   const sound = useSound();
+  const snackbar = useSnackbar();
   const { isMobile, isIOSTouch } = useDevice();
 
   const { initNotifications } = useNotifications();
@@ -300,8 +302,49 @@ export function NotificationsWorker() {
     initNotifications();
   }
 
+  /**
+   * Whether the browser would show its permission prompt: explain it first
+   * instead of springing it on the first tap, since a refusal is hard to
+   * undo on a phone
+   */
+  const needsAsking = () =>
+    "Notification" in window &&
+    Notification.permission === "default" &&
+    state.settings.desktopNotificationsState !== "denied";
+
+  let started = false;
   createEffect(() => {
-    if (client().ready()) document.addEventListener("click", tryRequest);
+    if (!client().ready() || started) return;
+    started = true;
+
+    // Already allowed: check the push subscription straight away
+    if ("Notification" in window && Notification.permission === "granted") {
+      initNotifications();
+      return;
+    }
+
+    if (!needsAsking()) {
+      document.addEventListener("click", tryRequest);
+      return;
+    }
+
+    let enabled = false;
+    snackbar.show({
+      message: t`Get notified about direct messages and mentions, even when Stoat is closed?`,
+      messageLine: 2,
+      action: t`Enable`,
+      closeable: true,
+      closeOnAction: true,
+      onAction() {
+        enabled = true;
+        // the tap on Enable lets the browser show its prompt
+        initNotifications();
+      },
+      onClose() {
+        // Not now: don't ask again; Settings > Notifications can turn it on
+        if (!enabled) state.settings.desktopNotificationsState = "denied";
+      },
+    });
   });
 
   onCleanup(() => document.removeEventListener("click", tryRequest));

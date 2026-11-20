@@ -12,7 +12,7 @@ import { useLingui } from "@lingui/solid/macro";
 import { Channel } from "stoat.js";
 
 import { useClient } from "@revolt/client";
-import { debounce } from "@revolt/common";
+import { debounce, useDevice } from "@revolt/common";
 import { createIsTimedOut } from "@revolt/common/lib/createIsTimedOut";
 import { useInstance } from "@revolt/instance";
 import { createKeybind, Keybind, KeybindAction } from "@revolt/keybinds";
@@ -48,6 +48,7 @@ interface Props {
  */
 export function MessageComposition(props: Props) {
   const state = useState();
+  const device = useDevice();
   const { t } = useLingui();
   const client = useClient();
   const { limits } = useInstance();
@@ -370,6 +371,9 @@ export function MessageComposition(props: Props) {
         initialValue={initialValue()}
         nodeReplacement={nodeReplacement()}
         onSendMessage={() => sendMessage()}
+        enterSends={() =>
+          state.settings.enterSends(device.isMobile || device.hasCoarsePointer)
+        }
         onTyping={delayedStopTyping}
         onEditLastMessage={() => state.draft.setEditingMessage(true)}
         content={draft()?.content ?? ""}

@@ -33,7 +33,7 @@ export function UserCard(
   props: JSX.Directives["floating"]["userCard"] &
     object & { onClose: () => void },
 ) {
-  const { isMobile } = useDevice();
+  const { isTouch } = useDevice();
   const { openModal } = useModals();
   const query = useQuery(() => ({
     queryKey: ["profile", props.user.id],
@@ -46,11 +46,11 @@ export function UserCard(
   }
 
   onMount(() => {
-    if (isMobile) openFull();
+    if (isTouch) openFull();
   });
 
   return (
-    <Show when={!isMobile}>
+    <Show when={!isTouch}>
       <div
         use:invisibleScrollable={{ class: base() }}
         on:pointerdown={(e) => {

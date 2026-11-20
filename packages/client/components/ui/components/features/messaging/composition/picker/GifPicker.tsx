@@ -56,7 +56,7 @@ type GifResult = {
 const FilterContext = createContext<(value: string) => void>();
 
 export function GifPicker() {
-  const { isMobile } = useDevice();
+  const { isTouch } = useDevice();
   const [filter, setFilter] = createSignal("");
   const [debouncedFilter, setDebouncedFilter] = createSignal("");
 
@@ -93,7 +93,7 @@ export function GifPicker() {
           </span>
         </Show>
         <TextField
-          autoFocus={!isMobile}
+          autoFocus={!isTouch}
           variant="outlined"
           placeholder="Search for GIFs..."
           value={filter()}

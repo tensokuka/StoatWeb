@@ -66,6 +66,12 @@ interface SettingsDefinition {
   "appearance:compact_mode": boolean;
 
   /**
+   * Whether Enter sends a message (otherwise it adds a line and Ctrl+Enter
+   * sends). Unset: on for desktop, off for touchscreens. Kept per device.
+   */
+  "input:enter_sends": boolean;
+
+  /**
    * Indicate new users to Stoat
    * TODO: implement
    */
@@ -106,6 +112,7 @@ const EXPECTED_TYPES: { [K in keyof SettingsDefinition]: ValueType<K> } = {
   "appearance:unicode_emoji": "string",
   "appearance:show_send_button": "boolean",
   "appearance:compact_mode": "boolean",
+  "input:enter_sends": "boolean",
   "advanced:copy_id": "boolean",
   "advanced:admin_panel": "boolean",
 };
@@ -152,6 +159,14 @@ export class Settings extends AbstractStore<"settings", TypeSettings> {
       "advanced:copy_id": false,
       "advanced:admin_panel": false,
     };
+  }
+
+  /**
+   * Whether Enter sends a message on this device
+   * @param touch Whether this is a touchscreen device
+   */
+  enterSends(touch: boolean) {
+    return this.getValue("input:enter_sends") ?? !touch;
   }
 
   /**

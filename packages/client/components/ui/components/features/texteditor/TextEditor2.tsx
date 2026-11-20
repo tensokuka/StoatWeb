@@ -50,6 +50,12 @@ interface Props {
   onComplete?: () => void;
 
   /**
+   * Whether Enter submits; otherwise it adds a line and Ctrl/Cmd+Enter does.
+   * Read on each press. Defaults to on for desktop, off for touchscreens.
+   */
+  enterSends?: () => boolean;
+
+  /**
    * Event is fired when any keys are input
    */
   onTyping?: () => void;
@@ -74,7 +80,7 @@ const placeholderCompartment = new Compartment();
 export function TextEditor2(props: Props) {
   const editorScrollbarClasses = scrollableStyles();
 
-  const { isMobile } = useDevice();
+  const { isMobile, hasCoarsePointer } = useDevice();
   const codeMirror = document.createElement("div");
   codeMirror.className = editor;
 
@@ -82,24 +88,37 @@ export function TextEditor2(props: Props) {
   codeMirror.style.minWidth = "0";
 
   /**
-   * Handle 'Enter' key presses
-   * Submit only if not currently in a code block
+   * Send, unless currently in a code block
+   */
+  function submit(view: EditorView) {
+    if (!props.onComplete) return false;
+
+    const cursor = view.state.selection.main;
+    if (!isInFencedCodeBlock(view.state, cursor.from, cursor.to)) {
+      props.onComplete();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Handle 'Enter' key presses: Enter sends if the user's setting says so
+   * (by default on desktop, not on touchscreens), Ctrl+Enter always does.
+   * Read on each press so changing the setting applies straight away.
    */
   const enterKeymap = keymap.of([
     {
-      key: isMobile ? "Ctrl-Enter" : "Enter",
+      key: "Enter",
+      run: (view) =>
+        (props.enterSends?.() ?? !(isMobile || hasCoarsePointer))
+          ? submit(view)
+          : false,
+    },
+    {
       //TODO Ctrl-Enter is only detected on Firefox mobile, not Chrome mobile
-      run: (view) => {
-        if (!props.onComplete) return false;
-
-        const cursor = view.state.selection.main;
-        if (!isInFencedCodeBlock(view.state, cursor.from, cursor.to)) {
-          props.onComplete();
-          return true;
-        } else {
-          return false;
-        }
-      },
+      key: "Mod-Enter",
+      run: submit,
     },
   ]);
 
@@ -227,7 +246,8 @@ export function TextEditor2(props: Props) {
         if (value) {
           const text = value[0];
           if (text !== "_focus") {
-            if (!isMobile) view.focus();
+            // focusing pops up the on-screen keyboard
+            if (!(isMobile || hasCoarsePointer)) view.focus();
             view.dispatch(view.state.replaceSelection(text));
             if (text) props.onTyping?.();
             props.onChange(view.state.doc.toString());

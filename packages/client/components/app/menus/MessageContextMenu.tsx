@@ -3,6 +3,7 @@ import { Accessor, For, Match, Show, Switch } from "solid-js";
 import { File, ImageEmbed, Message, VideoEmbed, WebsiteEmbed } from "stoat.js";
 
 import { useClient, useUser } from "@revolt/client";
+import { saveFile } from "@revolt/common";
 import { useInstance } from "@revolt/instance";
 import { CustomEmoji, UnicodeEmoji } from "@revolt/markdown/emoji";
 import { useModals } from "@revolt/modal";
@@ -23,6 +24,7 @@ import MdOpenInNew from "@material-design-icons/svg/outlined/open_in_new.svg?com
 import MdPin from "@material-design-icons/svg/outlined/pin_invoke.svg?component-solid";
 import MdReply from "@material-design-icons/svg/outlined/reply.svg?component-solid";
 import MdReport from "@material-design-icons/svg/outlined/report.svg?component-solid";
+import MdSelectAll from "@material-design-icons/svg/outlined/select_all.svg?component-solid";
 import MdShare from "@material-design-icons/svg/outlined/share.svg?component-solid";
 import MdShield from "@material-design-icons/svg/outlined/shield.svg?component-solid";
 
@@ -37,6 +39,7 @@ import {
 } from "./ContextMenu";
 import { QuickReactions } from "./QuickReactions";
 import { ReactionDetails } from "./ReactionDetails";
+import { SelectableText } from "./SelectableText";
 
 /**
  * Context menu for messages
@@ -262,15 +265,17 @@ export function MessageContextMenu(props: {
           <Trans>Copy link to file</Trans>
         </ContextMenuButton>
         <Show when={props.file instanceof File}>
-          <a
-            target="_blank"
-            download={(props.file as File)?.filename}
-            href={(props.file as File)?.originalUrl}
+          <ContextMenuButton
+            icon={MdDownload}
+            onClick={() =>
+              saveFile(
+                (props.file as File).originalUrl,
+                (props.file as File).filename,
+              )
+            }
           >
-            <ContextMenuButton icon={MdDownload}>
-              <Trans>Save file</Trans>
-            </ContextMenuButton>
-          </a>
+            <Trans>Save file</Trans>
+          </ContextMenuButton>
           <ContextMenuButton
             icon={MdContentCopy}
             onClick={() => copyFile((props.file as File)!.originalUrl)}
@@ -313,6 +318,15 @@ export function MessageContextMenu(props: {
         <ContextMenuButton icon={MdContentCopy} onClick={copyText}>
           <Trans>Copy text</Trans>
         </ContextMenuButton>
+        {/* copy part of a message, which iPhones can't select in place */}
+        <Show when={sheet && props.message!.content}>
+          <ContextMenuSubMenu
+            icon={MdSelectAll}
+            buttonContent={<Trans>Select text</Trans>}
+          >
+            <SelectableText text={props.message!.contentPlain} />
+          </ContextMenuSubMenu>
+        </Show>
 
         <ContextMenuDivider />
 

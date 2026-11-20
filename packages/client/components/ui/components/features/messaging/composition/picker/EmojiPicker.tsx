@@ -79,7 +79,7 @@ const [hoveredItem, setHoveredItem] = createSignal<Item | null>(null);
 export function EmojiPicker(props: { channel?: Channel }) {
   const client = useClient();
   const { ordering, settings } = useState();
-  const { isMobile } = useDevice();
+  const { isTouch } = useDevice();
   const { t } = useLingui();
 
   const [filter, setFilter] = createSignal("");
@@ -180,7 +180,7 @@ export function EmojiPicker(props: { channel?: Channel }) {
   return (
     <Stack>
       <TextField
-        autoFocus={!isMobile}
+        autoFocus={!isTouch}
         variant="outlined"
         placeholder="Search for emojis..."
         value={filter()}

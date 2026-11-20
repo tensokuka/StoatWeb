@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { userIdFromScope } from "../components/client/pushScope";
+import { bumpAppBadge } from "./appBadge";
 import { openNotificationUrl } from "./notificationClick";
 import { addPushLog } from "./pushLog";
 
@@ -32,6 +33,41 @@ self.addEventListener("notificationclick", (event) => {
   if (typeof event.notification.data === "string") {
     event.waitUntil(openNotificationUrl(self.clients, event.notification.data));
   }
+});
+
+/**
+ * The browser can replace a subscription (expiry, key rotation). Take a new
+ * one with the same key; the app sends it to the server on its next launch.
+ */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const change = event as Event & {
+    oldSubscription?: PushSubscription | null;
+    waitUntil(promise: Promise<unknown>): void;
+  };
+
+  change.waitUntil(
+    (async () => {
+      const key = change.oldSubscription?.options.applicationServerKey;
+      let detail = "no previous key, waiting for the app to resubscribe";
+      if (key) {
+        try {
+          await self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: key,
+          });
+          detail = "resubscribed";
+        } catch (e) {
+          detail = `resubscribing failed: ${e}`;
+        }
+      }
+      await addPushLog({
+        time: Date.now(),
+        kind: "error",
+        scope: self.registration.scope,
+        detail: `subscription changed by the browser, ${detail}`,
+      });
+    })(),
+  );
 });
 
 self.addEventListener("push", (event) => {
@@ -97,6 +133,9 @@ async function handlePush(event: PushEvent) {
       detail: `reading the push failed, showing a generic one: ${e}`,
     });
   }
+
+  // a quiet push replaces one already counted
+  if (!options.silent) await bumpAppBadge();
 
   try {
     await self.registration.showNotification(title, options);

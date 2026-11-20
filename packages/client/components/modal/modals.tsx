@@ -1,4 +1,4 @@
-import { mergeProps, splitProps } from "solid-js";
+import { lazy, mergeProps, splitProps } from "solid-js";
 
 import { IS_DEV } from "@revolt/client";
 
@@ -60,7 +60,6 @@ import { ScreenSharePickerModal } from "./modals/ScreenSharePicker";
 import { ScreenShareSettingsModal } from "./modals/ScreenShareSettings";
 import { ServerIdentityModal } from "./modals/ServerIdentity";
 import { ServerInfoModal } from "./modals/ServerInfo";
-import { SettingsModal } from "./modals/Settings";
 import { SignOutSessionsModal } from "./modals/SignOutSessions";
 import { SignedOutModal } from "./modals/SignedOut";
 import { SwapUserModal } from "./modals/SwapUser";
@@ -70,6 +69,11 @@ import { UserProfileModal } from "./modals/UserProfile";
 import { UserProfileMutualFriendsModal } from "./modals/UserProfileMutualFriends";
 import { UserProfileMutualGroupsModal } from "./modals/UserProfileMutualGroups";
 import { UserProfileRolesModal } from "./modals/UserProfileRoles";
+
+// Loaded when first opened, keeping them out of the startup bundle (P2)
+const SettingsModal = lazy(() =>
+  import("./modals/Settings").then((m) => ({ default: m.SettingsModal })),
+);
 
 /**
  * Render the modal

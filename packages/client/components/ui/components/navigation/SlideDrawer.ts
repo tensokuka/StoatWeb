@@ -68,7 +68,8 @@ export class SlideDrawer {
     this.lShow = initiallyShown;
     this.start = this.start.bind(this);
     this.move = this.move.bind(this);
-    root.addEventListener("touchstart", this.start);
+    // never cancelled, so it mustn't hold up scrolling (P3)
+    root.addEventListener("touchstart", this.start, { passive: true });
     root.addEventListener("touchmove", this.move);
     root.addEventListener("touchend", this.move);
     // iOS sends touchcancel instead of touchend when the system takes over a swipe
@@ -282,6 +283,9 @@ export class SlideDrawer {
   set enabled(en: boolean) {
     if (this.eGet() !== en) {
       this.drawer.style.zIndex = en ? "1" : "";
+      // the browser keeps vertical scrolling and pinch zoom to itself; only
+      // horizontal swipes need the drawer's handlers (P3)
+      this.root.style.touchAction = en ? "pan-y pinch-zoom" : "";
       this.pendingShow = null;
       this.tfTimer();
       this.endTouch();

@@ -18,6 +18,7 @@ import { Column, Dialog, DialogProps, IconButton, Text } from "@revolt/ui";
 import { Symbol } from "@revolt/ui/components/utils/Symbol";
 
 import { MessageContextMenu } from "@revolt/app";
+import { saveFile } from "@revolt/common";
 import { isGifBox } from "@revolt/common/lib/gifs";
 import { Modals } from "../types";
 
@@ -125,15 +126,16 @@ export function ImageViewerModal(
                       <Symbol>zoom_in</Symbol>
                     </IconButton>
                     <Show when={props.file}>
-                      <a
-                        target="_blank"
-                        href={props.file?.originalUrl}
-                        download={props.file?.filename}
+                      <IconButton
+                        onPress={() =>
+                          saveFile(
+                            props.file!.originalUrl,
+                            props.file!.filename,
+                          )
+                        }
                       >
-                        <IconButton>
-                          <Symbol>download</Symbol>
-                        </IconButton>
-                      </a>
+                        <Symbol>download</Symbol>
+                      </IconButton>
                     </Show>
                     <Show when={props.embed || props.gif}>
                       <a

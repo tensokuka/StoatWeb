@@ -8,8 +8,8 @@ import {
   onCleanup,
 } from "solid-js";
 
-import { addLongPressListener } from "./longPress";
 import { addPressFeedback, longPressVibrate } from "../gestures/pressFeedback";
+import { addLongPressListener } from "./longPress";
 
 type Props = JSX.Directives["floating"] & object;
 
@@ -20,18 +20,29 @@ export type FloatingElement = {
   show: Accessor<Props | undefined>;
 };
 
-const [floatingElements, setFloatingElements] = createSignal<FloatingElement[]>(
-  [],
-);
+/**
+ * Every tooltip, menu and card trigger on screen: several per message, so
+ * hundreds in a busy channel. Kept in a set, so registering doesn't copy a
+ * list each time (P4); `version` tells readers it changed.
+ */
+const registry = new Set<FloatingElement>();
+const [version, setVersion] = createSignal(0);
 
-export { floatingElements };
+/**
+ * All registered floating elements
+ */
+export function floatingElements() {
+  version();
+  return [...registry];
+}
 
 /**
  * Register a new floating element
  * @param element element
  */
 export function registerFloatingElement(element: FloatingElement) {
-  setFloatingElements((elements) => [...elements, element]);
+  registry.add(element);
+  setVersion((v) => v + 1);
 }
 
 /**
@@ -39,9 +50,10 @@ export function registerFloatingElement(element: FloatingElement) {
  * @param element DOM Element
  */
 export function unregisterFloatingElement(element: HTMLElement) {
-  setFloatingElements((elements) =>
-    elements.filter((entry) => entry.element !== element),
-  );
+  for (const entry of registry) {
+    if (entry.element === element) registry.delete(entry);
+  }
+  setVersion((v) => v + 1);
 }
 
 /**

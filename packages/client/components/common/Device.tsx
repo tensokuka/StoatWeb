@@ -64,6 +64,14 @@ export class Device {
   readonly hasCoarsePointer =
     typeof window !== "undefined" && matchMedia("(pointer: coarse)").matches;
 
+  /**
+   * Whether to behave as a touch device: phones (isMobile only spots "Mobi"
+   * in the user agent) and tablets, which mostly don't say "Mobi"
+   */
+  get isTouch() {
+    return this.isMobile || this.hasCoarsePointer;
+  }
+
   private pMedia;
   private tMedia;
   private setLayout;
@@ -79,6 +87,7 @@ export class Device {
     this.pMedia = matchMedia(Breakpoint.phone);
     this.tMedia = matchMedia(Breakpoint.tablet);
     (this.pMedia.onchange = this.tMedia.onchange = this.onLayout)();
+    document.addEventListener("visibilitychange", this.onVisibility);
 
     if (this.isPWA && navigator.virtualKeyboard) {
       navigator.virtualKeyboard.overlaysContent = true;
@@ -134,6 +143,7 @@ export class Device {
   };
 
   destroy = () => {
+    document.removeEventListener("visibilitychange", this.onVisibility);
     this.pMedia.onchange = this.tMedia.onchange = null;
     this.untrackKeyboard?.();
   };
@@ -149,12 +159,31 @@ export class Device {
    * lock on the device.
    */
   setWakeLocked = async () => {
+    this.wakeLockWanted = true;
+
     // Noop if already wake locked
     if (this.isWakeLocked) {
       return;
     }
 
-    this.wakeLock = await navigator.wakeLock.request("screen");
+    try {
+      this.wakeLock = await navigator.wakeLock?.request("screen");
+    } catch {
+      // Refused, e.g. while hidden; tried again when the app is shown
+    }
+  };
+
+  /** Whether a wake lock should be held, so it can be restored */
+  private wakeLockWanted = false;
+
+  /**
+   * Browsers drop the wake lock whenever the app is hidden, so take it again
+   * when coming back during a call
+   */
+  private onVisibility = () => {
+    if (document.visibilityState === "visible" && this.wakeLockWanted) {
+      void this.setWakeLocked();
+    }
   };
 
   /**
@@ -162,6 +191,8 @@ export class Device {
    * noop if there is no current wake lock.
    */
   releaseWakeLock = async () => {
+    this.wakeLockWanted = false;
+
     // Noop if no wake lock
     if (!this.isWakeLocked) {
       return;
