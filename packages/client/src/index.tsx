@@ -2,7 +2,6 @@
  * Configure contexts and render App
  */
 import "./sentry";
-import "./viewport";
 
 import { JSX, lazy, onMount } from "solid-js";
 import { render } from "solid-js/web";
