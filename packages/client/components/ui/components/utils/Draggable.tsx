@@ -23,6 +23,12 @@ interface Props<T> {
   }) => JSX.Element;
   onChange: (ids: string[]) => void;
   minimumDropAreaHeight?: string;
+  /**
+   * Keep the minimum drop area even when not dragging. Otherwise empty lists
+   * grow when a drag starts, shifting everything below them out from under
+   * the pointer
+   */
+  reserveDropArea?: boolean;
   dropIndicator?: boolean;
 }
 
@@ -90,14 +96,18 @@ export function Draggable<T>(props: Props<T>) {
    * @param e
    */
   function handleDndEvent(e: DragHandleEvent<T>) {
-    setDragDisabled(props.dragHandles || false);
+    // with handles, dragging goes back off once the drop is done; turning
+    // it off mid-drag made touch drags snap back to where they started
+    if (e.type === "finalize") setDragDisabled(props.dragHandles || false);
 
     const { items: newContainerItems } = e.detail;
     setContainerItems(newContainerItems);
 
     if (e.type === "finalize") {
       if (zone) {
-        zone.style.minHeight = "";
+        zone.style.minHeight = props.reserveDropArea
+          ? (props.minimumDropAreaHeight ?? "24px")
+          : "";
         zone.style.minWidth = "";
       }
 
@@ -126,7 +136,12 @@ export function Draggable<T>(props: Props<T>) {
     if (!row) return;
 
     const { left, top } = row.getBoundingClientRect();
-    grabbedAt = { x: e.clientX - left, y: e.clientY - top };
+    // a finger grabs a handle at the row's end: keep the dragged copy
+    // under the row instead of moving its corner to the finger
+    grabbedAt =
+      e.pointerType === "touch"
+        ? { x: 3, y: 3 }
+        : { x: e.clientX - left, y: e.clientY - top };
   }
 
   function styleDraggedElement(element?: HTMLElement) {
@@ -153,7 +168,15 @@ export function Draggable<T>(props: Props<T>) {
     <div
       ref={zone}
       data-drop-zone
-      class={props.dropIndicator ? dropIndicatorStyles : undefined}
+      class={
+        (props.dropIndicator ? dropIndicatorStyles : "") +
+        (props.reserveDropArea ? " " + reservedDropAreaStyles : "")
+      }
+      style={{
+        "min-height": props.reserveDropArea
+          ? (props.minimumDropAreaHeight ?? "24px")
+          : undefined,
+      }}
       onPointerDown={onPointerDown}
       use:dndzone={{
         type: props.type,
@@ -192,6 +215,16 @@ export function Draggable<T>(props: Props<T>) {
     </div>
   );
 }
+
+// an empty list kept open to drop into
+const reservedDropAreaStyles = css({
+  borderRadius: "var(--borderRadius-md)",
+
+  "&:empty": {
+    outline: "1px dashed var(--md-sys-color-outline-variant)",
+    outlineOffset: "-4px",
+  },
+});
 
 const dropIndicatorStyles = css({
   "& > [data-is-dnd-shadow-item-internal]": {

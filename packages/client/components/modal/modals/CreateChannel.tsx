@@ -1,9 +1,20 @@
 import { createFormControl, createFormGroup } from "solid-forms";
+import { For, Show, createSignal } from "solid-js";
 
 import { Trans, useLingui } from "@lingui/solid/macro";
 
 import { useNavigate } from "@revolt/routing";
-import { Column, Dialog, DialogProps, Form2, Radio2 } from "@revolt/ui";
+import {
+  Column,
+  Dialog,
+  DialogProps,
+  FloatingSelect,
+  Form2,
+  MenuItem,
+  Radio2,
+} from "@revolt/ui";
+
+import { moveChannelToCategory } from "../../../src/interface/navigation/channels/ordering";
 
 import { useModals } from "..";
 import { Modals } from "../types";
@@ -23,6 +34,13 @@ export function CreateChannelModal(
     type: createFormControl("Text"),
   });
 
+  // which category to put it in, "default" for none
+  // eslint-disable-next-line solid/reactivity -- only the starting value
+  const [category, setCategory] = createSignal(props.categoryId ?? "default");
+  const categories = () =>
+    props.server.categories?.filter((category) => category.id !== "default") ??
+    [];
+
   async function onSubmit() {
     try {
       const type = group.controls.type.value as "Text" | "Voice" | "Panel";
@@ -33,18 +51,19 @@ export function CreateChannelModal(
         ...(type === "Panel" ? { description: "[panel]" } : {}),
       });
 
-      //Reorder categories
+      // Put it in the chosen category
       const newChId = channel.id,
-        catId = props.categoryId;
-      if (catId && catId !== "default") {
-        let ch, chIds;
-        props.server.edit({
-          categories: props.server.orderedChannels.map((cat) => {
-            chIds = [];
-            for (ch of cat.channels) if (ch.id !== newChId) chIds.push(ch.id);
-            if (cat.id === catId) chIds.push(newChId);
-            return { ...cat, channels: chIds };
-          }),
+        catId = category();
+      if (catId !== "default") {
+        const known = props.server.channels.map((ch) => ch.id);
+        if (!known.includes(newChId)) known.push(newChId);
+        await props.server.edit({
+          categories: moveChannelToCategory(
+            props.server.categories,
+            known,
+            newChId,
+            catId,
+          ),
         });
       }
 
@@ -102,6 +121,21 @@ export function CreateChannelModal(
               <Trans>Panel</Trans>
             </Radio2.Option>
           </Form2.Radio>
+
+          <Show when={categories().length}>
+            <FloatingSelect
+              label={t`Category`}
+              value={category()}
+              onChange={(e) => setCategory(e.currentTarget.value ?? "default")}
+            >
+              <MenuItem value="default">
+                <Trans>No category</Trans>
+              </MenuItem>
+              <For each={categories()}>
+                {(entry) => <MenuItem value={entry.id}>{entry.title}</MenuItem>}
+              </For>
+            </FloatingSelect>
+          </Show>
         </Column>
       </form>
     </Dialog>

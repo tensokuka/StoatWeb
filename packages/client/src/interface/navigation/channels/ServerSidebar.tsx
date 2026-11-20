@@ -7,6 +7,7 @@ import {
   Switch,
   createMemo,
   createSignal,
+  onCleanup,
 } from "solid-js";
 
 import { useLingui } from "@lingui/solid/macro";
@@ -14,7 +15,7 @@ import type { Channel, Server, ServerFlags } from "stoat.js";
 import { styled } from "styled-system/jsx";
 
 import { ServerContextMenu } from "@revolt/app";
-import { getChannelIcon, useDevice } from "@revolt/common";
+import { getChannelIcon, useBackHandler, useDevice } from "@revolt/common";
 import { KeybindAction, createKeybind } from "@revolt/keybinds";
 import { TextWithEmoji } from "@revolt/markdown";
 import { useModals } from "@revolt/modal";
@@ -22,6 +23,7 @@ import { useNavigate } from "@revolt/routing";
 import { useVoice } from "@revolt/rtc";
 import { useState } from "@revolt/state";
 import {
+  Button,
   Column,
   Draggable,
   Header,
@@ -40,6 +42,7 @@ import { createDragHandle } from "@revolt/ui/components/utils/Draggable";
 import { Symbol } from "@revolt/ui/components/utils/Symbol";
 
 import MdChevronRight from "@material-design-icons/svg/filled/chevron_right.svg?component-solid";
+import MdDragHandle from "@material-design-icons/svg/outlined/drag_handle.svg?component-solid";
 import MdSettings from "@material-symbols/svg-400/outlined/settings-fill.svg?component-solid";
 
 import { SidebarBase } from "./common";
@@ -48,6 +51,7 @@ import {
   applyChannelOrdering,
   orderedCategories,
 } from "./ordering";
+import { reorderingServer, setReorderingServer } from "./reorderMode";
 
 interface Props {
   /**
@@ -100,6 +104,16 @@ type OrderingEvent =
 export const ServerSidebar = (props: Props) => {
   const navigate = useNavigate();
   const { isMobile, hasCoarsePointer } = useDevice();
+  const { t } = useLingui();
+
+  // Touchscreens reorder by handles, in a mode turned on from the server menu
+  const touch = isMobile || hasCoarsePointer;
+  const reordering = () => reorderingServer() === props.server.id;
+  const stopReordering = () => setReorderingServer(undefined);
+  useBackHandler(reordering, stopReordering);
+  onCleanup(() => {
+    if (reordering()) stopReordering();
+  });
 
   // Users can manage certain parts of the server individually, regardless of their ManageServer Permission
   const canManageServer = () =>
@@ -253,6 +267,14 @@ export const ServerSidebar = (props: Props) => {
           </Header>
         </Match>
       </Switch>
+      <Show when={reordering()}>
+        <ReorderBar>
+          <span>{t`Drag ≡ to move channels and categories`}</span>
+          <Button size="sm" onPress={stopReordering}>
+            {t`Done`}
+          </Button>
+        </ReorderBar>
+      </Show>
       <ChannelList>
         <UnreadCallout list={list} />
         <div
@@ -274,6 +296,7 @@ export const ServerSidebar = (props: Props) => {
                 setDragDisabled={() => void 0}
                 noOrdering={noOrdering}
                 handleOrdering={handleOrdering}
+                reordering={reordering}
               />
             )}
           </Show>
@@ -281,9 +304,7 @@ export const ServerSidebar = (props: Props) => {
             dragHandles
             dropIndicator
             type="category"
-            //TODO - No channel ordering on mobile due to usability issue
-            //Consider adding a way to enable reordering with dragHandles in server settings
-            disabled={isMobile || hasCoarsePointer || noOrdering()}
+            disabled={(touch && !reordering()) || noOrdering()}
             items={categories().filter((category) => category.id !== "default")}
             onChange={(ids) => handleOrdering({ type: "categories", ids })}
           >
@@ -297,6 +318,7 @@ export const ServerSidebar = (props: Props) => {
                 setDragDisabled={entry.setDragDisabled}
                 noOrdering={noOrdering}
                 handleOrdering={handleOrdering}
+                reordering={reordering}
               />
             )}
           </Draggable>
@@ -305,6 +327,31 @@ export const ServerSidebar = (props: Props) => {
     </SidebarBase>
   );
 };
+
+const ReorderBar = styled("div", {
+  base: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "var(--gap-md)",
+    // fill the sidebar without making it wider
+    width: 0,
+    minWidth: "calc(100% - 2 * var(--gap-md))",
+    margin: "0 var(--gap-md) var(--gap-md)",
+    padding: "var(--gap-md) var(--gap-lg)",
+
+    // wrap rather than widen the sidebar, which sizes to its content
+    "& > span": {
+      flex: "1 1 0",
+      minWidth: 0,
+      whiteSpace: "normal",
+    },
+    borderRadius: "var(--borderRadius-lg)",
+    background: "var(--md-sys-color-secondary-container)",
+    color: "var(--md-sys-color-on-secondary-container)",
+    fontSize: "14px",
+  },
+});
 
 const ChannelList = styled("div", {
   base: {
@@ -415,6 +462,7 @@ function Category(
     channelId: string | undefined;
     noOrdering: Accessor<boolean>;
     handleOrdering: (event: OrderingEvent) => void;
+    reordering: Accessor<boolean>;
   } & Pick<Props, "menuGenerator"> & {
       dragDisabled: Accessor<boolean>;
       setDragDisabled: (value: boolean) => void;
@@ -447,6 +495,17 @@ function Category(
           >
             {props.category.title}
             <MdChevronRight {...iconSize(12)} />
+            <Show when={props.reordering()}>
+              <HeaderHandle
+                aria-label="Drag to reorder"
+                on:touchstart={(e) => {
+                  e.preventDefault();
+                  props.setDragDisabled(false);
+                }}
+              >
+                <MdDragHandle {...iconSize(24)} />
+              </HeaderHandle>
+            </Show>
           </CategoryBase>
         </div>
       </Show>
@@ -464,18 +523,26 @@ function Category(
             moved: reorderedIds.length !== current.length,
           });
         }}
-        //TODO - No channel ordering on mobile due to usability issue
-        //Consider adding a way to enable reordering with dragHandles in server settings
+        // touchscreens drag by the handles shown in reorder mode
+        dragHandles={isMobile || hasCoarsePointer}
         disabled={
-          isMobile || hasCoarsePointer || props.noOrdering() || !isOpen()
+          ((isMobile || hasCoarsePointer) && !props.reordering()) ||
+          props.noOrdering() ||
+          !isOpen()
         }
         minimumDropAreaHeight="42px"
+        reserveDropArea={props.reordering()}
       >
         {(entry) => (
           <Entry
             channel={entry.item}
             active={entry.item.id === props.channelId}
             menuGenerator={props.menuGenerator}
+            reordering={props.reordering()}
+            dragHandle={createDragHandle(
+              entry.dragDisabled,
+              entry.setDragDisabled,
+            )}
           />
         )}
       </Draggable>
@@ -545,7 +612,13 @@ const CategoryBase = styled("div", {
  * Server channel entry
  */
 function Entry(
-  props: { channel: Channel; active: boolean } & Pick<Props, "menuGenerator">,
+  props: {
+    channel: Channel;
+    active: boolean;
+    /** Show a drag handle (touchscreen reorder mode) */
+    reordering?: boolean;
+    dragHandle?: ReturnType<typeof createDragHandle>;
+  } & Pick<Props, "menuGenerator">,
 ) {
   const state = useState();
   const voice = useVoice();
@@ -585,84 +658,151 @@ function Entry(
 
   return (
     <Column gap="sm">
-      <MenuButton
-        href={`/server/${props.channel.serverId}/channel/${props.channel.id}`}
-        use:floating={props.menuGenerator(props.channel)}
-        size="normal"
-        data-unread={props.channel.unread ? "" : undefined}
-        data-mentions={props.channel.mentions?.size || undefined}
-        alert={alertState()}
-        attention={attentionState()}
-        icon={
-          <>
-            <Symbol
-              color={
-                props.channel.isVoice && inCall()
-                  ? "var(--md-sys-color-primary)"
-                  : undefined
-              }
-            >
-              {getChannelIcon(props.channel)}
-            </Symbol>
-            <Show when={props.channel.icon}>
-              <ChannelIcon
-                src={props.channel.iconURL}
-                css={{ marginEnd: "0.2em" }}
-              />
-            </Show>
-          </>
-        }
-        actions={
-          <Show when={!isMobile}>
-            <Show when={canInvite()}>
-              <a
-                use:floating={{
-                  tooltip: { placement: "top", content: "Create Invite" },
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  openModal({
-                    type: "create_invite",
-                    channel: props.channel,
-                  });
-                }}
+      <EntryRow reordering={!!props.reordering}>
+        <MenuButton
+          href={`/server/${props.channel.serverId}/channel/${props.channel.id}`}
+          use:floating={props.menuGenerator(props.channel)}
+          size="normal"
+          data-unread={props.channel.unread ? "" : undefined}
+          data-mentions={props.channel.mentions?.size || undefined}
+          alert={alertState()}
+          attention={attentionState()}
+          icon={
+            <>
+              <Symbol
+                color={
+                  props.channel.isVoice && inCall()
+                    ? "var(--md-sys-color-primary)"
+                    : undefined
+                }
               >
-                <Symbol size={16} fill>
-                  person_add
-                </Symbol>
-              </a>
+                {getChannelIcon(props.channel)}
+              </Symbol>
+              <Show when={props.channel.icon}>
+                <ChannelIcon
+                  src={props.channel.iconURL}
+                  css={{ marginEnd: "0.2em" }}
+                />
+              </Show>
+            </>
+          }
+          actions={
+            <Show when={!isMobile}>
+              <Show when={canInvite()}>
+                <a
+                  use:floating={{
+                    tooltip: { placement: "top", content: "Create Invite" },
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openModal({
+                      type: "create_invite",
+                      channel: props.channel,
+                    });
+                  }}
+                >
+                  <Symbol size={16} fill>
+                    person_add
+                  </Symbol>
+                </a>
+              </Show>
+              <Show when={canEditChannel()}>
+                <a
+                  use:floating={{
+                    tooltip: { placement: "top", content: "Edit Channel" },
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openModal({
+                      type: "settings",
+                      config: "channel",
+                      context: props.channel,
+                    });
+                  }}
+                >
+                  <Symbol size={16} fill>
+                    settings
+                  </Symbol>
+                </a>
+              </Show>
             </Show>
-            <Show when={canEditChannel()}>
-              <a
-                use:floating={{
-                  tooltip: { placement: "top", content: "Edit Channel" },
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  openModal({
-                    type: "settings",
-                    config: "channel",
-                    context: props.channel,
-                  });
-                }}
-              >
-                <Symbol size={16} fill>
-                  settings
-                </Symbol>
-              </a>
-            </Show>
-          </Show>
-        }
-      >
-        <OverflowingText>
-          <TextWithEmoji content={props.channel.name!} />
-        </OverflowingText>
-      </MenuButton>
+          }
+        >
+          <OverflowingText>
+            <TextWithEmoji content={props.channel.name!} />
+          </OverflowingText>
+        </MenuButton>
+        <Show when={props.reordering && props.dragHandle}>
+          <DragHandle
+            aria-label="Drag to reorder"
+            // native, not delegated: dragging has to be on before the touch
+            // reaches the row, where the drag library picks it up
+            on:touchstart={(e) => props.dragHandle!.ontouchstart(e)}
+            // the drag, not the page, gets the finger
+            style={{ "touch-action": "none" }}
+          >
+            <MdDragHandle {...iconSize(24)} />
+          </DragHandle>
+        </Show>
+      </EntryRow>
 
       <VoiceChannelPreview channel={props.channel} />
     </Column>
   );
 }
+
+// The handle sits over the row's end rather than beside it, so it doesn't
+// widen the sidebar, which sizes to its content
+const EntryRow = styled("div", {
+  base: {
+    position: "relative",
+  },
+  variants: {
+    reordering: {
+      true: {
+        "& > :first-child": {
+          paddingInlineEnd: "44px",
+        },
+      },
+    },
+  },
+});
+
+const HeaderHandle = styled("div", {
+  base: {
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0,
+    width: "44px",
+    height: "36px",
+    marginInlineStart: "auto",
+    touchAction: "none",
+    fill: "currentColor",
+
+    // the header turns its chevron with a rule that would catch this too
+    "& svg": {
+      transform: "none !important",
+    },
+  },
+});
+
+const DragHandle = styled("div", {
+  base: {
+    position: "absolute",
+    insetInlineEnd: 0,
+    top: "50%",
+    translate: "0 -50%",
+    zIndex: 1,
+    display: "grid",
+    placeItems: "center",
+    flexShrink: 0,
+    width: "44px",
+    height: "44px",
+    color: "var(--md-sys-color-on-surface-variant)",
+    fill: "currentColor",
+    cursor: "grab",
+  },
+});
 
 /**
  * Channel icon styling

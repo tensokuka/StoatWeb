@@ -1,4 +1,4 @@
-import { JSX, Match, Show, Switch, children } from "solid-js";
+import { For, JSX, Match, Show, Switch, children } from "solid-js";
 
 import { Trans } from "@lingui/solid/macro";
 import { Channel } from "stoat.js";
@@ -9,6 +9,7 @@ import { useState } from "@revolt/state";
 
 import MdBadge from "@material-design-icons/svg/outlined/badge.svg?component-solid";
 import MdDelete from "@material-design-icons/svg/outlined/delete.svg?component-solid";
+import MdMoveToCategory from "@material-design-icons/svg/outlined/drive_file_move.svg?component-solid";
 import MdGroupAdd from "@material-design-icons/svg/outlined/group_add.svg?component-solid";
 import MdLibraryAdd from "@material-design-icons/svg/outlined/library_add.svg?component-solid";
 import MdLogout from "@material-design-icons/svg/outlined/logout.svg?component-solid";
@@ -16,11 +17,18 @@ import MdMarkChatRead from "@material-design-icons/svg/outlined/mark_chat_read.s
 import MdSettings from "@material-design-icons/svg/outlined/settings.svg?component-solid";
 import MdShare from "@material-design-icons/svg/outlined/share.svg?component-solid";
 import MdShield from "@material-design-icons/svg/outlined/shield.svg?component-solid";
+import MdRadioButtonChecked from "@material-symbols/svg-400/outlined/radio_button_checked-fill.svg?component-solid";
+import MdRadioButtonUnchecked from "@material-symbols/svg-400/outlined/radio_button_unchecked.svg?component-solid";
 
+import {
+  categoryOf,
+  moveChannelToCategory,
+} from "../../../src/interface/navigation/channels/ordering";
 import {
   ContextMenu,
   ContextMenuButton,
   ContextMenuDivider,
+  ContextMenuSubMenu,
 } from "./ContextMenu";
 import { NotificationContextMenu } from "./shared/NotificationContextMenu";
 
@@ -41,7 +49,7 @@ export function ChannelContextMenu(props: {
 }) {
   const state = useState();
   const instance = useInstance();
-  const { openModal } = useModals();
+  const { openModal, showError } = useModals();
   const prepend = children(() => props.prepend);
 
   /**
@@ -77,6 +85,23 @@ export function ChannelContextMenu(props: {
       server: props.channel.server!,
       categoryId: getCategory(props.channel),
     });
+  }
+
+  /**
+   * Move this channel to the end of a category ("default" for none)
+   */
+  function moveTo(categoryId: string) {
+    const server = props.channel.server!;
+    server
+      .edit({
+        categories: moveChannelToCategory(
+          server.categories,
+          server.channels.map((channel) => channel.id),
+          props.channel.id,
+          categoryId,
+        ),
+      })
+      .catch(showError);
   }
 
   /**
@@ -182,6 +207,43 @@ export function ChannelContextMenu(props: {
         <ContextMenuButton icon={MdLibraryAdd} onClick={createCategory}>
           <Trans>Create category</Trans>
         </ContextMenuButton>
+      </Show>
+      {/* also how phones, which can't drag, change a channel's category */}
+      <Show
+        when={
+          props.channel.server?.havePermission("ManageChannel") &&
+          props.channel.server.categories?.some((c) => c.id !== "default")
+        }
+      >
+        <ContextMenuSubMenu
+          icon={MdMoveToCategory}
+          buttonContent={<Trans>Move to category</Trans>}
+        >
+          <For
+            each={[
+              { id: "default", title: undefined as string | undefined },
+              ...props.channel.server!.categories!.filter(
+                (category) => category.id !== "default",
+              ),
+            ]}
+          >
+            {(category) => (
+              <ContextMenuButton
+                onClick={() => moveTo(category.id)}
+                actionSymbol={
+                  categoryOf(
+                    props.channel.server!.categories,
+                    props.channel.id,
+                  ) === category.id
+                    ? MdRadioButtonChecked
+                    : MdRadioButtonUnchecked
+                }
+              >
+                {category.title ?? <Trans>No category</Trans>}
+              </ContextMenuButton>
+            )}
+          </For>
+        </ContextMenuSubMenu>
       </Show>
       <Show when={props.channel.havePermission("ManageChannel")}>
         <ContextMenuButton icon={MdSettings} onClick={editChannel}>
