@@ -5,6 +5,12 @@ import { styled } from "styled-system/jsx";
 import { Button, Column, Row, Text } from "@revolt/ui";
 
 import {
+  appBadgeSupported,
+  lastAppBadgeError,
+  savedAppBadge,
+  setAppBadge,
+} from "../../../../../../src/appBadge";
+import {
   PushLogEntry,
   addPushLog,
   clearPushLog,
@@ -28,6 +34,19 @@ export default function PushDiagnostics() {
   const [workers, setWorkers] = createSignal<WorkerInfo[]>([]);
   const [log, setLog] = createSignal<PushLogEntry[]>([]);
   const [busy, setBusy] = createSignal(false);
+  const [badge, setBadge] = createSignal("");
+
+  async function refreshBadge() {
+    setBadge(
+      `${appBadgeSupported() ? "supported" : "not supported"}, last count ${await savedAppBadge()}` +
+        (lastAppBadgeError ? `, last error: ${lastAppBadgeError}` : ""),
+    );
+  }
+
+  async function testBadge() {
+    await setAppBadge(3);
+    await refreshBadge();
+  }
 
   const supported = "serviceWorker" in navigator;
 
@@ -60,6 +79,7 @@ export default function PushDiagnostics() {
       }
       setWorkers(found);
       setLog(await readPushLog());
+      await refreshBadge();
     } finally {
       setBusy(false);
     }
@@ -115,7 +135,14 @@ export default function PushDiagnostics() {
         (navigator as never as { standalone?: boolean }).standalone
           ? "yes"
           : "no"}
+        {"\n"}
+        app icon badge: {badge()}
       </Mono>
+      <Row>
+        <Button size="sm" variant="tonal" onPress={testBadge}>
+          <Trans>Test badge (sets it to 3)</Trans>
+        </Button>
+      </Row>
 
       <Show
         when={supported}

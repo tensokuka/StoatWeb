@@ -31,15 +31,28 @@ async function load() {
   }
 }
 
+/** The last error from setting the badge, for diagnostics */
+export let lastAppBadgeError: string | undefined;
+
 async function show(count: number) {
   const nav = navigator as BadgeNavigator;
   try {
     if (count > 0) await nav.setAppBadge?.(count);
     else await nav.clearAppBadge?.();
-  } catch {
+    lastAppBadgeError = undefined;
+  } catch (e) {
     // not supported, or not allowed without notification permission
+    lastAppBadgeError = String(e);
   }
 }
+
+/** Whether this browser can badge the app icon */
+export function appBadgeSupported() {
+  return "setAppBadge" in navigator;
+}
+
+/** The last count saved, for diagnostics */
+export const savedAppBadge = load;
 
 /** Set the badge to the real count (from the app) */
 export async function setAppBadge(count: number) {
