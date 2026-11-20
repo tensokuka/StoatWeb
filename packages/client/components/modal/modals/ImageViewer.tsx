@@ -108,9 +108,17 @@ export function ImageViewerModal(
                 <Bar>
                   <Switch fallback={<div />}>
                     <Match when={props.file}>
-                      <Card onClick={(e) => e.stopPropagation()}>
-                        <Column>
-                          <Text class="title">{props.file!.filename}</Text>
+                      <Card shrink onClick={(e) => e.stopPropagation()}>
+                        <Column class={css({ minWidth: 0 })}>
+                          <div
+                            class={css({
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            })}
+                          >
+                            <Text class="title">{props.file!.filename}</Text>
+                          </div>
                           <Text class="label">
                             {props.file!.humanReadableSize}
                           </Text>
@@ -264,6 +272,8 @@ const Bar = styled("div", {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    // a long filename gives way so the buttons stay on screen
+    gap: "var(--gap-md)",
   },
 });
 
@@ -276,5 +286,14 @@ const Card = styled("div", {
     borderRadius: "var(--borderRadius-lg)",
     background: "var(--md-sys-color-surface)",
     color: "var(--md-sys-color-on-surface)",
+    flexShrink: 0,
+  },
+  variants: {
+    shrink: {
+      true: {
+        flexShrink: 1,
+        minWidth: 0,
+      },
+    },
   },
 });
