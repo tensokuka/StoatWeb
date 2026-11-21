@@ -25,6 +25,7 @@ import MdPersonAdd from "@material-design-icons/svg/outlined/person_add.svg?comp
 import MdReport from "@material-design-icons/svg/outlined/report.svg?component-solid";
 import MdSettings from "@material-design-icons/svg/outlined/settings.svg?component-solid";
 import MdShield from "@material-design-icons/svg/outlined/shield.svg?component-solid";
+import MdSwapVert from "@material-design-icons/svg/outlined/swap_vert.svg?component-solid";
 
 import MdDoNotDisturbOff from "@material-symbols/svg-400/outlined/do_not_disturb_off.svg?component-solid";
 import MdDoNotDisturbOn from "@material-symbols/svg-400/outlined/do_not_disturb_on.svg?component-solid";
@@ -32,6 +33,7 @@ import MdNotificationSettings from "@material-symbols/svg-400/outlined/notificat
 import MdRadioButtonChecked from "@material-symbols/svg-400/outlined/radio_button_checked-fill.svg?component-solid";
 import MdRadioButtonUnchecked from "@material-symbols/svg-400/outlined/radio_button_unchecked.svg?component-solid";
 
+import { setReorderingServer } from "../../../src/interface/navigation/channels/reorderMode";
 import {
   ContextMenu,
   ContextMenuButton,
@@ -348,6 +350,15 @@ export function ServerContextMenu(props: { server: Server }) {
         <ContextMenuButton icon={MdLibraryAdd} onClick={createCategory}>
           <Trans>Create category</Trans>
         </ContextMenuButton>
+        {/* desktop drags rows directly; touchscreens drag by handles */}
+        <Show when={device.isTouch}>
+          <ContextMenuButton
+            icon={MdSwapVert}
+            onClick={() => setReorderingServer(props.server.id)}
+          >
+            <Trans>Reorder channels</Trans>
+          </ContextMenuButton>
+        </Show>
       </Show>
       <Show when={permissionEditIdentity()}>
         <ContextMenuButton icon={MdFace} onClick={editIdentity}>

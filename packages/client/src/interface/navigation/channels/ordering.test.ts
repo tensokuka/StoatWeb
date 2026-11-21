@@ -1,6 +1,11 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
-import { applyChannelOrdering, orderedCategories } from "./ordering";
+import {
+  applyChannelOrdering,
+  categoryOf,
+  moveChannelToCategory,
+  orderedCategories,
+} from "./ordering";
 
 describe("orderedCategories", () => {
   const category = (id: string, channels: string[]) => ({
@@ -93,5 +98,46 @@ describe("applyChannelOrdering", () => {
     expect(applyChannelOrdering(["hidden", "a"], ["a"], [])).toEqual([
       "hidden",
     ]);
+  });
+});
+
+describe("moveChannelToCategory", () => {
+  const categories = [
+    { id: "A", title: "A", channels: ["a1", "a2"] },
+    { id: "B", title: "B", channels: ["b1"] },
+  ];
+  const known = ["a1", "a2", "b1", "loose"];
+
+  it("moves a channel to the end of another category", () => {
+    const result = moveChannelToCategory(categories, known, "a1", "B");
+    expect(result.find((c) => c.id === "A")!.channels).toEqual(["a2"]);
+    expect(result.find((c) => c.id === "B")!.channels).toEqual(["b1", "a1"]);
+  });
+
+  it("moves a channel out of its category", () => {
+    const result = moveChannelToCategory(categories, known, "b1", "default");
+    expect(result.find((c) => c.id === "B")!.channels).toEqual([]);
+    expect(result.find((c) => c.id === "default")!.channels).toEqual([
+      "loose",
+      "b1",
+    ]);
+  });
+
+  it("moves an uncategorised channel into a category", () => {
+    const result = moveChannelToCategory(categories, known, "loose", "A");
+    expect(result.find((c) => c.id === "A")!.channels).toEqual([
+      "a1",
+      "a2",
+      "loose",
+    ]);
+    expect(result.find((c) => c.id === "default")!.channels).toEqual([]);
+  });
+});
+
+describe("categoryOf", () => {
+  it("finds a channel's category, or default", () => {
+    const categories = [{ id: "A", title: "A", channels: ["a1"] }];
+    expect(categoryOf(categories, "a1")).toBe("A");
+    expect(categoryOf(categories, "x")).toBe("default");
   });
 });

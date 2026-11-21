@@ -40,6 +40,30 @@ export function NotificationsWorker() {
   const { initNotifications } = useNotifications();
 
   /**
+   * What a message without text shared, worded like the push notifications
+   */
+  function describeAttachments(types: string[]) {
+    const kind = (type: string) =>
+      type === "Image" || type === "Video" || type === "Audio" ? type : "File";
+    const kinds = new Set(types.map(kind));
+    const count = types.length;
+
+    if (kinds.size > 1) return t`Shared ${count} attachments`;
+    switch ([...kinds][0]) {
+      case "Image":
+        return count === 1 ? t`Shared an image` : t`Shared ${count} images`;
+      case "Video":
+        return count === 1 ? t`Shared a video` : t`Shared ${count} videos`;
+      case "Audio":
+        return count === 1
+          ? t`Shared an audio file`
+          : t`Shared ${count} audio files`;
+      default:
+        return count === 1 ? t`Shared a file` : t`Shared ${count} files`;
+    }
+  }
+
+  /**
    * Handle incoming messages
    * @param message Message
    */
@@ -198,7 +222,9 @@ export function NotificationsWorker() {
           break;
       }
     } else if (message.attachments?.length) {
-      body = t`Sent ${message.attachments!.length} attachments`;
+      body = describeAttachments(
+        message.attachments!.map((f) => f.metadata.type),
+      );
     }
 
     // Don't continue without notification permissions (iOS only has Notification in home screen apps)
